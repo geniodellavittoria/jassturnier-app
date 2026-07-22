@@ -1,0 +1,103 @@
+<header class="page-head">
+  <h1>Finalrunde</h1>
+  <p class="lede">
+    Die besten Teams jeder Gruppe spielen in Finalgruppen — danach Halbfinals, Kleiner Final und Final.
+  </p>
+</header>
+
+@if (store.tournament().groups.length === 0) {
+  <div class="card empty-state">
+    <p>Zuerst Gruppen und Teams erfassen.</p>
+    <a routerLink="/einrichtung" class="btn">Zur Einrichtung</a>
+  </div>
+} @else {
+  <div class="actions">
+    <button type="button" class="btn" (click)="draw()">
+      @if (views().length === 0) {
+        Finalrunde auslosen
+      } @else {
+        Finalrunde neu auslosen
+      }
+    </button>
+    @if (!store.groupPhaseComplete() && views().length === 0) {
+      <p class="hint">Hinweis: Die Gruppenphase ist noch nicht vollständig erfasst.</p>
+    }
+  </div>
+
+  @if (views().length > 0) {
+    @for (view of views(); track view.group.id) {
+      <section class="card" [attr.aria-label]="view.group.name">
+        <h2>{{ view.group.name }}</h2>
+        <div class="final-group">
+          <div>
+            <h3>Punkte</h3>
+            <app-score-grid
+              [teams]="teamsOf(view.group.teamIds)"
+              [scores]="store.tournament().finalScores"
+              [roundCount]="store.tournament().finalRounds"
+              [caption]="view.group.name"
+              (scoreChange)="onScore($event)"
+            />
+          </div>
+          <div>
+            <h3>Rangliste</h3>
+            <app-standings-table
+              [entries]="view.standings"
+              [caption]="view.group.name"
+              [highlightTop]="1"
+              [showPlayers]="false"
+            />
+          </div>
+        </div>
+        <details>
+          <summary>Spielplan anzeigen</summary>
+          <app-schedule-list [schedule]="view.schedule" [teams]="store.tournament().teams" />
+        </details>
+      </section>
+    }
+
+    <section class="card ko-section" aria-labelledby="ko-title">
+      <div class="section-head">
+        <h2 id="ko-title">KO-Phase</h2>
+        <button type="button" class="btn" (click)="seedSemis()">
+          @if (hasKo()) {
+            Halbfinals neu setzen
+          } @else {
+            Halbfinals setzen
+          }
+        </button>
+      </div>
+      <p class="hint">
+        Gesetzt werden die Gruppensieger und der beste Zweite: Bester Sieger gegen den besten Zweiten,
+        die anderen beiden Sieger gegeneinander.
+      </p>
+
+      @if (hasKo()) {
+        <div class="ko-grid">
+          <app-ko-match-card matchId="hf1" label="Halbfinal 1" />
+          <app-ko-match-card matchId="hf2" label="Halbfinal 2" />
+          <app-ko-match-card
+            matchId="kleinerFinal"
+            label="Kleiner Final"
+            pendingText="Die Verlierer der Halbfinals spielen um Rang 3."
+          />
+          <app-ko-match-card
+            matchId="final"
+            label="Final"
+            pendingText="Die Sieger der Halbfinals spielen um den Turniersieg."
+          />
+        </div>
+
+        @if (store.champion(); as champion) {
+          <p class="champion" role="status">
+            <span class="champion-label">Turniersieger {{ store.tournament().year }}</span>
+            <span class="champion-name">{{ champion.name }}</span>
+            @if (champion.players.length > 0) {
+              <span class="champion-players">{{ champion.players.join(' · ') }}</span>
+            }
+          </p>
+        }
+      }
+    </section>
+  }
+}

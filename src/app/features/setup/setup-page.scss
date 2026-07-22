@@ -1,0 +1,99 @@
+:host {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.meta h2,
+.danger h2 {
+  margin: 0 0 0.9rem;
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.9rem 1.2rem;
+  align-items: end;
+}
+
+.field {
+  display: grid;
+  gap: 0.3rem;
+
+  label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-soft);
+  }
+
+  input[type='text'],
+  input[type='number'] {
+    padding: 0.5rem 0.6rem;
+    font: inherit;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--input-border);
+    border-radius: 0.45rem;
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+  }
+
+  &.wide {
+    grid-column: span 2;
+  }
+
+  &.check {
+    grid-column: 1 / -1;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0.55rem;
+
+    label {
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+
+    input {
+      inline-size: 1.15rem;
+      block-size: 1.15rem;
+      accent-color: var(--brand);
+    }
+  }
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-block-end: 0.9rem;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.group-grid {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.empty-state {
+  display: grid;
+  justify-items: start;
+  gap: 0.8rem;
+}
+
+.danger-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.hint {
+  margin: 0.8rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-soft);
+}

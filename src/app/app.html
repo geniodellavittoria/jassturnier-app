@@ -1,0 +1,25 @@
+@if (!presenting()) {
+  <a class="skip-link" href="#main">Zum Inhalt springen</a>
+  <header class="app-header">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+        <path d="M12 2.6c-3.4 0-5.5 2.7-5.7 6.2-.13 2.4-.7 4.3-1.9 5.7-.5.6-.2 1.5.6 1.5h14c.8 0 1.1-.9.6-1.5-1.2-1.4-1.77-3.3-1.9-5.7C17.5 5.3 15.4 2.6 12 2.6Z" />
+        <path d="M9.6 18.2h4.8a2.4 2.4 0 0 1-4.8 0Z" />
+      </svg>
+      <div class="brand-text">
+        <span class="brand-name">{{ store.tournament().name }}</span>
+        <span class="brand-year">{{ store.tournament().year }}</span>
+      </div>
+    </div>
+    <nav aria-label="Hauptnavigation">
+      <a routerLink="/einrichtung" routerLinkActive="active">Einrichtung</a>
+      <a routerLink="/gruppen" routerLinkActive="active">Gruppenphase</a>
+      <a routerLink="/finalrunde" routerLinkActive="active">Finalrunde</a>
+      <a routerLink="/praesentation" routerLinkActive="active" class="present-link">Präsentation</a>
+    </nav>
+  </header>
+}
+
+<main id="main" [class.presenting]="presenting()">
+  <router-outlet />
+</main>

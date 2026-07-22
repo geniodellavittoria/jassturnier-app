@@ -1,0 +1,67 @@
+<header class="page-head">
+  <h1>Einrichtung</h1>
+  <p class="lede">Turnier benennen, Regeln festlegen, Gruppen und Teams erfassen.</p>
+</header>
+
+<form class="card meta" [formGroup]="metaForm">
+  <h2>Turnier &amp; Regeln</h2>
+  <div class="meta-grid">
+    <div class="field wide">
+      <label for="meta-name">Turniername</label>
+      <input id="meta-name" type="text" formControlName="name" />
+    </div>
+    <div class="field">
+      <label for="meta-year">Jahr</label>
+      <input id="meta-year" type="number" formControlName="year" min="2000" max="2100" />
+    </div>
+    <div class="field">
+      <label for="meta-rounds">Runden Gruppenphase</label>
+      <input id="meta-rounds" type="number" formControlName="groupRounds" min="1" max="12" />
+    </div>
+    <div class="field">
+      <label for="meta-frounds">Runden Finalgruppen</label>
+      <input id="meta-frounds" type="number" formControlName="finalRounds" min="1" max="12" />
+    </div>
+    <div class="field">
+      <label for="meta-quali">Aufsteiger pro Gruppe</label>
+      <input id="meta-quali" type="number" formControlName="qualifiersPerGroup" min="1" max="4" />
+    </div>
+    <div class="field check">
+      <input id="meta-drop" type="checkbox" formControlName="dropWorst" />
+      <label for="meta-drop">Streichresultat (schlechteste Runde der Gruppenphase zählt nicht)</label>
+    </div>
+  </div>
+</form>
+
+<section aria-labelledby="groups-title" class="groups-section">
+  <div class="section-head">
+    <h2 id="groups-title">Gruppen</h2>
+    <button type="button" class="btn" (click)="store.addGroup()">Neue Gruppe</button>
+  </div>
+
+  @if (store.tournament().groups.length === 0) {
+    <div class="card empty-state">
+      <p>
+        Noch keine Gruppen. Mit «Neue Gruppe» starten — oder das
+        <strong>Jassturnier 2025</strong> als Demo laden, um die App gefüllt zu sehen.
+      </p>
+      <button type="button" class="btn" (click)="loadDemo()">Demo-Daten 2025 laden</button>
+    </div>
+  } @else {
+    <div class="group-grid">
+      @for (group of store.tournament().groups; track group.id) {
+        <app-group-editor [group]="group" [index]="$index" />
+      }
+    </div>
+  }
+</section>
+
+<section aria-labelledby="danger-title" class="card danger">
+  <h2 id="danger-title">Daten</h2>
+  <div class="danger-actions">
+    <button type="button" class="btn btn-quiet" (click)="loadDemo()">Demo-Daten 2025 laden</button>
+    <button type="button" class="btn btn-quiet" (click)="resetScores()">Nur Punkte zurücksetzen</button>
+    <button type="button" class="btn btn-danger" (click)="resetAll()">Alles löschen</button>
+  </div>
+  <p class="hint">Der Stand wird automatisch im Browser gespeichert (localStorage) — auch nach einem Neustart bleibt alles erhalten.</p>
+</section>

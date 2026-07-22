@@ -1,0 +1,168 @@
+// ── Fonts (self-hosted via Fontsource) ──────────────────────────────────────
+@use '@fontsource-variable/bricolage-grotesque' as bricolage;
+@use '@fontsource/instrument-sans/400' as is400;
+@use '@fontsource/instrument-sans/600' as is600;
+@use '@fontsource/instrument-sans/700' as is700;
+
+// ── Design tokens: card stock, felt green, Swiss-deck accents ───────────────
+:root {
+  // Palette
+  --paper: #f8f4e8; // card-stock cream
+  --surface: #fffdf6;
+  --surface-raised: #f4efdf;
+  --ink: #26241c;
+  --ink-soft: #6d6a5b;
+  --felt: #1e4d30; // card-table green
+  --rosen: #ad342d; // Rosen red
+  --gold: #d9a03f; // Schellen gold
+  --gold-deep: #8a5f1c;
+  --chalk: #f3efe4;
+
+  // Semantic
+  --text: var(--ink);
+  --text-soft: var(--ink-soft);
+  --brand: var(--felt);
+  --accent: var(--rosen);
+  --negative: var(--rosen);
+  --table-rule: #e4ddc8;
+  --table-rule-strong: #cfc7ac;
+  --input-border: #bdb69c;
+
+  // Type
+  --font-display: 'Bricolage Grotesque Variable', 'Instrument Sans', system-ui, sans-serif;
+  --font-body: 'Instrument Sans', system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  line-height: 1.15;
+  color: var(--text);
+}
+
+h1 {
+  font-size: clamp(1.7rem, 3.5vw, 2.3rem);
+  font-weight: 800;
+  margin: 0;
+}
+
+h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+h3 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.page-head {
+  margin-block-end: 0.25rem;
+
+  .lede {
+    margin: 0.35rem 0 0;
+    color: var(--text-soft);
+    max-inline-size: 46rem;
+  }
+}
+
+.card {
+  display: block;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  background: var(--surface);
+  border: 1px solid var(--table-rule-strong);
+  border-radius: 0.9rem;
+  box-shadow: 0 1px 2px rgba(38, 36, 28, 0.06);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.05rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--paper);
+  background: var(--brand);
+  border: 1px solid var(--brand);
+  border-radius: 999px;
+  cursor: pointer;
+  text-decoration: none;
+
+  &:hover {
+    background: color-mix(in srgb, var(--brand) 88%, black);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.btn-quiet {
+  color: var(--brand);
+  background: transparent;
+  border-color: var(--table-rule-strong);
+
+  &:hover {
+    background: var(--surface-raised);
+  }
+}
+
+.btn-danger {
+  color: var(--paper);
+  background: var(--rosen);
+  border-color: var(--rosen);
+
+  &:hover {
+    background: color-mix(in srgb, var(--rosen) 88%, black);
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

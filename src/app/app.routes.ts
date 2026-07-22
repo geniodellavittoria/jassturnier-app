@@ -1,0 +1,26 @@
+import { Routes } from '@angular/router';
+
+export const routes: Routes = [
+  { path: '', pathMatch: 'full', redirectTo: 'einrichtung' },
+  {
+    path: 'einrichtung',
+    title: 'Einrichtung · Jassturnier',
+    loadComponent: () => import('./features/setup/setup-page').then((m) => m.SetupPage),
+  },
+  {
+    path: 'gruppen',
+    title: 'Gruppenphase · Jassturnier',
+    loadComponent: () => import('./features/groups/groups-page').then((m) => m.GroupsPage),
+  },
+  {
+    path: 'finalrunde',
+    title: 'Finalrunde · Jassturnier',
+    loadComponent: () => import('./features/finals/finals-page').then((m) => m.FinalsPage),
+  },
+  {
+    path: 'praesentation',
+    title: 'Präsentation · Jassturnier',
+    loadComponent: () => import('./features/present/present-page').then((m) => m.PresentPage),
+  },
+  { path: '**', redirectTo: 'einrichtung' },
+];

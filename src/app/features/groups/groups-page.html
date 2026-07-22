@@ -1,0 +1,58 @@
+<header class="page-head">
+  <h1>Gruppenphase</h1>
+  <p class="lede">Punkte pro Runde eintragen — Rangliste und Streichresultat rechnen sich von selbst.</p>
+</header>
+
+@if (views().length === 0) {
+  <div class="card empty-state">
+    <p>Noch keine Gruppen erfasst.</p>
+    <a routerLink="/einrichtung" class="btn">Zur Einrichtung</a>
+  </div>
+} @else {
+  <div class="tabs" role="group" aria-label="Gruppe wählen">
+    @for (view of views(); track view.group.id) {
+      <button
+        type="button"
+        class="tab"
+        [attr.aria-pressed]="$index === selectedIndex()"
+        [class.active]="$index === selectedIndex()"
+        (click)="select($index)"
+      >
+        <app-suit-badge [index]="$index" />
+        {{ view.group.name }}
+      </button>
+    }
+  </div>
+
+  @if (currentView(); as view) {
+    <div class="stack">
+      <section class="card" aria-label="Punkteeingabe">
+        <h2>Punkte — {{ view.group.name }}</h2>
+        <app-score-grid
+          [teams]="currentTeams()"
+          [scores]="store.tournament().groupScores"
+          [roundCount]="store.tournament().groupRounds"
+          [caption]="view.group.name"
+          (scoreChange)="onScore($event)"
+        />
+      </section>
+
+      <section class="card" aria-label="Rangliste">
+        <h2>Rangliste</h2>
+        <app-standings-table
+          [entries]="view.standings"
+          [caption]="view.group.name"
+          [highlightTop]="store.tournament().qualifiersPerGroup"
+        />
+        <p class="hint">
+          Die besten {{ store.tournament().qualifiersPerGroup }} Teams (▸) steigen in die Finalrunde auf.
+        </p>
+      </section>
+
+      <section class="card" aria-label="Spielplan">
+        <h2>Spielplan</h2>
+        <app-schedule-list [schedule]="view.schedule" [teams]="store.tournament().teams" />
+      </section>
+    </div>
+  }
+}

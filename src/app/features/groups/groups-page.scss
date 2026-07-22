@@ -1,0 +1,57 @@
+:host {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.9rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--brand);
+  background: var(--surface);
+  border: 1px solid var(--table-rule-strong);
+  border-radius: 999px;
+  cursor: pointer;
+  --suit-size: 1.15rem;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  &.active {
+    color: var(--surface);
+    background: var(--brand);
+    border-color: var(--brand);
+  }
+}
+
+.stack {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.card h2 {
+  margin: 0 0 0.9rem;
+}
+
+.hint {
+  margin: 0.7rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-soft);
+}
+
+.empty-state {
+  display: grid;
+  justify-items: start;
+  gap: 0.8rem;
+}

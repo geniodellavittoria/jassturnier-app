@@ -1,0 +1,166 @@
+<div class="frame">
+  <header class="topbar">
+    <a routerLink="/gruppen" class="chalk-link">‹ Zurück zur Eingabe</a>
+    <p class="wordmark" aria-hidden="true">{{ store.tournament().name }}</p>
+    <div class="controls">
+      <button type="button" class="chalk-btn" (click)="togglePause()" [attr.aria-pressed]="paused()">
+        @if (paused()) {
+          Weiter
+        } @else {
+          Pause
+        }
+      </button>
+      <button type="button" class="chalk-btn" (click)="toggleFullscreen()">Vollbild</button>
+    </div>
+  </header>
+
+  <main class="slide" aria-live="polite">
+    @switch (current().kind) {
+      @case ('title') {
+        <div class="title-slide">
+          <p class="eyebrow">Rangliste live</p>
+          <h1>{{ store.tournament().name }}</h1>
+          <p class="year">{{ store.tournament().year }}</p>
+          <div class="suit-row" aria-hidden="true">
+            @for (i of [0, 1, 2, 3]; track i) {
+              <app-suit-badge [index]="i" />
+            }
+          </div>
+          @if (slides().length === 1) {
+            <p class="empty-note">Noch keine Gruppen erfasst — sobald Teams eingetragen sind, erscheinen hier die Ranglisten.</p>
+          }
+        </div>
+      }
+      @case ('group') {
+        @if (current(); as slide) {
+          @if (slide.kind === 'group') {
+            <div class="group-slide">
+              <header class="slide-head">
+                <app-suit-badge [index]="slide.suitIndex" />
+                <div>
+                  <p class="eyebrow">{{ slide.stage }}</p>
+                  <h1>{{ slide.view.group.name }}</h1>
+                </div>
+                @if (slide.nextRound !== null) {
+                  <p class="round-flag">Runde {{ slide.nextRound + 1 }} läuft</p>
+                } @else {
+                  <p class="round-flag done">Alle Runden gespielt</p>
+                }
+              </header>
+
+              <app-standings-table
+                class="chalk-table"
+                [entries]="slide.view.standings"
+                [caption]="slide.view.group.name"
+                [highlightTop]="slide.highlightTop"
+                [showPlayers]="true"
+              />
+
+              @if (slide.nextRound !== null && slide.view.schedule[slide.nextRound]; as pairings) {
+                <footer class="now-playing">
+                  <h2>Jetzt an den Tischen</h2>
+                  <ul>
+                    @for (p of pairings; track p.table) {
+                      <li>
+                        <span class="table-no">Tisch {{ p.table }}</span>
+                        {{ teamName(p.homeId) }} <span class="vs" aria-hidden="true">×</span>
+                        <span class="visually-hidden">gegen</span>
+                        {{ teamName(p.awayId) }}
+                      </li>
+                    }
+                  </ul>
+                </footer>
+              }
+            </div>
+          }
+        }
+      }
+      @case ('ko') {
+        <div class="ko-slide">
+          <header class="slide-head center">
+            <p class="eyebrow">Finalrunde</p>
+            <h1>Halbfinal &amp; Final</h1>
+          </header>
+
+          <div class="ko-columns">
+            <section aria-label="Halbfinals">
+              <h2>Halbfinal</h2>
+              @for (tie of [ko().hf1, ko().hf2]; track $index) {
+                <div class="tie">
+                  <p class="tie-row" [class.winner]="store.winnerOf(tie) === tie.teamA">
+                    <span>{{ teamName(tie.teamA) }}</span>
+                    <span class="pts">{{ tie.pointsA ?? '–' }}</span>
+                  </p>
+                  <p class="tie-row" [class.winner]="store.winnerOf(tie) === tie.teamB">
+                    <span>{{ teamName(tie.teamB) }}</span>
+                    <span class="pts">{{ tie.pointsB ?? '–' }}</span>
+                  </p>
+                </div>
+              }
+            </section>
+
+            <section aria-label="Kleiner Final und Final">
+              <h2>Kleiner Final</h2>
+              <div class="tie">
+                <p class="tie-row" [class.winner]="store.winnerOf(ko().kleinerFinal) === ko().kleinerFinal.teamA">
+                  <span>{{ teamName(ko().kleinerFinal.teamA) }}</span>
+                  <span class="pts">{{ ko().kleinerFinal.pointsA ?? '–' }}</span>
+                </p>
+                <p class="tie-row" [class.winner]="store.winnerOf(ko().kleinerFinal) === ko().kleinerFinal.teamB">
+                  <span>{{ teamName(ko().kleinerFinal.teamB) }}</span>
+                  <span class="pts">{{ ko().kleinerFinal.pointsB ?? '–' }}</span>
+                </p>
+              </div>
+
+              <h2>Final</h2>
+              <div class="tie final">
+                <p class="tie-row" [class.winner]="store.winnerOf(ko().final) === ko().final.teamA">
+                  <span>{{ teamName(ko().final.teamA) }}</span>
+                  <span class="pts">{{ ko().final.pointsA ?? '–' }}</span>
+                </p>
+                <p class="tie-row" [class.winner]="store.winnerOf(ko().final) === ko().final.teamB">
+                  <span>{{ teamName(ko().final.teamB) }}</span>
+                  <span class="pts">{{ ko().final.pointsB ?? '–' }}</span>
+                </p>
+              </div>
+            </section>
+          </div>
+
+          @if (podium().first; as champion) {
+            <footer class="podium" role="status">
+              <p class="eyebrow">Turniersieger {{ store.tournament().year }}</p>
+              <p class="champion">{{ champion.name }}</p>
+              @if (champion.players.length > 0) {
+                <p class="champion-players">{{ champion.players.join(' · ') }}</p>
+              }
+              <p class="minor-places">
+                @if (podium().second; as second) {
+                  <span>2. {{ second.name }}</span>
+                }
+                @if (podium().third; as third) {
+                  <span>3. {{ third.name }}</span>
+                }
+              </p>
+            </footer>
+          }
+        </div>
+      }
+    }
+  </main>
+
+  <nav class="dots" aria-label="Folien">
+    @for (slide of slides(); track $index) {
+      <button
+        type="button"
+        class="dot"
+        [class.active]="$index === index()"
+        [attr.aria-current]="$index === index()"
+        (click)="goTo($index)"
+      >
+        <span class="visually-hidden">{{ slideLabel(slide) }}</span>
+      </button>
+    }
+  </nav>
+
+  <p class="keys-hint" aria-hidden="true">←  → Folien · Leertaste Pause · F Vollbild</p>
+</div>
