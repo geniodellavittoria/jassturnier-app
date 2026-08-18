@@ -1,11 +1,22 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "jass-turnier",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-08-18",
   "assets": {
     "directory": "./dist/jass-turnier/browser",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "jass-turnier-db",
+      "database_id": "51f05a64-05f9-4621-b9cc-0d0c2ae2337c",
+      "migrations_dir": "migrations"
+    }
+  ],
   "observability": {
     "enabled": true
   }

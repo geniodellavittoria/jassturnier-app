@@ -14,7 +14,7 @@
     </div>
   </header>
 
-  <main class="slide" aria-live="polite">
+  <main class="slide" [class.wide]="current().kind === 'groups-overview'" aria-live="polite">
     @switch (current().kind) {
       @case ('title') {
         <div class="title-slide">
@@ -31,46 +31,32 @@
           }
         </div>
       }
-      @case ('group') {
+      @case ('groups-overview') {
         @if (current(); as slide) {
-          @if (slide.kind === 'group') {
-            <div class="group-slide">
-              <header class="slide-head">
-                <app-suit-badge [index]="slide.suitIndex" />
-                <div>
-                  <p class="eyebrow">{{ slide.stage }}</p>
-                  <h1>{{ slide.view.group.name }}</h1>
-                </div>
-                @if (slide.nextRound !== null) {
-                  <p class="round-flag">Runde {{ slide.nextRound + 1 }} läuft</p>
-                } @else {
-                  <p class="round-flag done">Alle Runden gespielt</p>
-                }
+          @if (slide.kind === 'groups-overview') {
+            <div class="groups-overview">
+              <header class="slide-head center">
+                <p class="eyebrow">{{ slide.stage }}</p>
+                <h1>{{ slide.stage === 'Gruppenphase' ? 'Gruppen' : 'Finalgruppen' }}</h1>
               </header>
 
-              <app-standings-table
-                class="chalk-table"
-                [entries]="slide.view.standings"
-                [caption]="slide.view.group.name"
-                [highlightTop]="slide.highlightTop"
-                [showPlayers]="true"
-              />
-
-              @if (slide.nextRound !== null && slide.view.schedule[slide.nextRound]; as pairings) {
-                <footer class="now-playing">
-                  <h2>Jetzt an den Tischen</h2>
-                  <ul>
-                    @for (p of pairings; track p.table) {
-                      <li>
-                        <span class="table-no">Tisch {{ p.table }}</span>
-                        {{ teamName(p.homeId) }} <span class="vs" aria-hidden="true">×</span>
-                        <span class="visually-hidden">gegen</span>
-                        {{ teamName(p.awayId) }}
-                      </li>
-                    }
-                  </ul>
-                </footer>
-              }
+              <div class="groups-grid">
+                @for (view of slide.views; track view.group.id; let i = $index) {
+                  <section class="group-card">
+                    <header class="card-head">
+                      <app-suit-badge [index]="i" />
+                      <h2>{{ view.group.name }}</h2>
+                    </header>
+                    <app-standings-table
+                      class="chalk-table mini-table"
+                      [entries]="view.standings"
+                      [caption]="view.group.name"
+                      [highlightTop]="slide.highlightTop"
+                      [showPlayers]="false"
+                    />
+                  </section>
+                }
+              </div>
             </div>
           }
         }

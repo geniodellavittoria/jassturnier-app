@@ -8,7 +8,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "deploy": "ng build && wrangler deploy",
-    "cf:dev": "ng build && wrangler dev"
+    "cf:dev": "ng build && wrangler dev",
+    "start:full": "ng serve --proxy-config proxy.conf.json"
   },
   "prettier": {
     "printWidth": 100,
@@ -40,6 +41,7 @@
     "@angular/build": "^20.3.32",
     "@angular/cli": "^20.3.32",
     "@angular/compiler-cli": "^20.3.0",
+    "@cloudflare/workers-types": "^5.20260818.1",
     "@types/jasmine": "~5.1.0",
     "jasmine-core": "~5.9.0",
     "karma": "~6.4.0",

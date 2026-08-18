@@ -22,5 +22,15 @@ export const routes: Routes = [
     title: 'Präsentation · Jassturnier',
     loadComponent: () => import('./features/present/present-page').then((m) => m.PresentPage),
   },
+  {
+    path: 'anmelden',
+    title: 'Anmeldung · Jassturnier',
+    loadComponent: () => import('./features/register/register-page').then((m) => m.RegisterPage),
+  },
+  {
+    path: 'verwaltung',
+    title: 'Verwaltung · Jassturnier',
+    loadComponent: () => import('./features/admin/admin-page').then((m) => m.AdminPage),
+  },
   { path: '**', redirectTo: 'einrichtung' },
 ];

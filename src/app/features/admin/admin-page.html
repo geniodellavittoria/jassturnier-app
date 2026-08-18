@@ -1,0 +1,139 @@
+<header class="page-head">
+  <h1>Verwaltung</h1>
+  <p class="lede">Anmeldungen prüfen und Zahlungsinformationen konfigurieren.</p>
+</header>
+
+@if (checking()) {
+  <p>Lädt…</p>
+} @else if (!authenticated()) {
+  <form class="card login" [formGroup]="loginForm" (ngSubmit)="login()">
+    <h2>Anmelden</h2>
+    <div class="field">
+      <label for="admin-password">Passwort</label>
+      <input id="admin-password" type="password" formControlName="password" required autocomplete="current-password" />
+    </div>
+    @if (loginError(); as message) {
+      <p class="error">{{ message }}</p>
+    }
+    <button type="submit" class="btn" [disabled]="loginForm.invalid || loggingIn()">
+      @if (loggingIn()) {
+        Wird geprüft…
+      } @else {
+        Anmelden
+      }
+    </button>
+  </form>
+} @else {
+  <section aria-labelledby="settings-title" class="card">
+    <div class="section-head">
+      <h2 id="settings-title">Zahlungsinformationen</h2>
+      <button type="button" class="btn btn-quiet" (click)="logout()">Abmelden</button>
+    </div>
+
+    <form [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
+      <div class="field-grid">
+        <div class="field">
+          <label for="s-recipient">Empfänger</label>
+          <input id="s-recipient" type="text" formControlName="recipientName" />
+        </div>
+        <div class="field">
+          <label for="s-bank">Bank</label>
+          <input id="s-bank" type="text" formControlName="bankName" />
+        </div>
+        <div class="field">
+          <label for="s-iban">IBAN</label>
+          <input id="s-iban" type="text" formControlName="iban" />
+        </div>
+        <div class="field">
+          <label for="s-reference">Referenz</label>
+          <input id="s-reference" type="text" formControlName="referenceNote" />
+        </div>
+        <div class="field">
+          <label for="s-amount">Betrag</label>
+          <input id="s-amount" type="text" formControlName="amount" />
+        </div>
+        <div class="field">
+          <label for="s-currency">Währung</label>
+          <input id="s-currency" type="text" formControlName="currency" />
+        </div>
+        <div class="field">
+          <label for="s-deadline">Zahlbar bis</label>
+          <input id="s-deadline" type="text" formControlName="deadline" placeholder="z.B. 15.09.2026" />
+        </div>
+        <div class="field wide">
+          <label for="s-message">Zusätzliche Nachricht</label>
+          <textarea id="s-message" formControlName="message" rows="3"></textarea>
+        </div>
+      </div>
+      <button type="submit" class="btn" [disabled]="savingSettings()">
+        @if (savingSettings()) {
+          Wird gespeichert…
+        } @else {
+          Speichern
+        }
+      </button>
+      @if (settingsSaved()) {
+        <span class="saved-hint">Gespeichert.</span>
+      }
+    </form>
+  </section>
+
+  <section aria-labelledby="regs-title" class="card">
+    <h2 id="regs-title">Anmeldungen ({{ registrations().length }})</h2>
+
+    @if (registrations().length === 0) {
+      <p class="empty">Noch keine Anmeldungen.</p>
+    } @else {
+      <div class="table-wrap">
+        <table class="registrations">
+          <thead>
+            <tr>
+              <th scope="col">Team</th>
+              <th scope="col">Spieler</th>
+              <th scope="col">Kontakt</th>
+              <th scope="col">Status</th>
+              <th scope="col">E-Mail</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (reg of registrations(); track reg.id) {
+              <tr>
+                <td>
+                  <span class="team-name">{{ reg.teamName }}</span>
+                  @if (reg.note) {
+                    <span class="note">{{ reg.note }}</span>
+                  }
+                </td>
+                <td>{{ playersLabel(reg) }}</td>
+                <td>
+                  <span>{{ reg.contactName }}</span>
+                  <span class="contact-email">{{ reg.contactEmail }}</span>
+                  @if (reg.phone) {
+                    <span class="contact-email">{{ reg.phone }}</span>
+                  }
+                </td>
+                <td>
+                  <select [value]="reg.status" (change)="updateStatus(reg, $any($event.target).value)">
+                    <option value="pending">Ausstehend</option>
+                    <option value="contacted">Kontaktiert</option>
+                    <option value="paid">Bezahlt</option>
+                  </select>
+                </td>
+                <td class="email-actions">
+                  <a class="btn btn-quiet" [href]="mailtoHref(reg)">Mail öffnen</a>
+                  <button type="button" class="btn btn-quiet" (click)="copyEmail(reg)">
+                    @if (copiedId() === reg.id) {
+                      Kopiert!
+                    } @else {
+                      Text kopieren
+                    }
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+}

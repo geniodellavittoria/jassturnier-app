@@ -84,11 +84,15 @@
   max-inline-size: 70rem;
   inline-size: 100%;
   margin-inline: auto;
+
+  &.wide {
+    max-inline-size: min(96vw, 110rem);
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .title-slide,
-  .group-slide,
+  .groups-overview,
   .ko-slide {
     animation: chalk-in 0.45s ease-out;
   }
@@ -152,10 +156,43 @@
   }
 }
 
-// Group slide
-.group-slide {
+// Groups overview slide
+.groups-overview {
   display: grid;
   gap: clamp(0.9rem, 2vh, 1.6rem);
+}
+
+.groups-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+  gap: clamp(1rem, 2.5vw, 2rem);
+}
+
+.group-card {
+  padding: clamp(0.8rem, 1.6vw, 1.2rem);
+  border: 1px solid var(--table-rule);
+  border-radius: 0.6rem;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-block-end: 0.6rem;
+  --suit-size: 1.6rem;
+  color: var(--gold);
+
+  h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(1.1rem, 2vw, 1.5rem);
+    font-weight: 800;
+    color: var(--chalk);
+  }
+}
+
+.mini-table {
+  font-size: clamp(0.75rem, 1.3vw, 1rem);
 }
 
 .slide-head {
@@ -180,58 +217,8 @@
   }
 }
 
-.round-flag {
-  margin: 0 0 0 auto;
-  padding: 0.4rem 0.9rem;
-  font-family: var(--font-display);
-  font-size: clamp(0.85rem, 1.6vw, 1.1rem);
-  font-weight: 700;
-  color: #23271f;
-  background: var(--gold);
-  border-radius: 999px;
-
-  &.done {
-    color: var(--chalk);
-    background: transparent;
-    border: 1px solid var(--table-rule-strong);
-  }
-}
-
 .chalk-table {
   font-size: clamp(0.95rem, 1.9vw, 1.35rem);
-}
-
-.now-playing {
-  h2 {
-    margin: 0 0 0.5rem;
-    font-family: var(--font-display);
-    font-size: clamp(0.85rem, 1.5vw, 1rem);
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--text-soft);
-  }
-
-  ul {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.6rem 1.6rem;
-    font-size: clamp(0.95rem, 1.8vw, 1.25rem);
-  }
-
-  .table-no {
-    font-family: var(--font-display);
-    font-weight: 700;
-    color: var(--gold);
-    margin-inline-end: 0.5rem;
-  }
-
-  .vs {
-    color: var(--gold);
-    padding-inline: 0.25rem;
-  }
 }
 
 // KO slide

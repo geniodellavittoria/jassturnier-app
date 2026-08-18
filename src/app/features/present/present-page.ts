@@ -11,24 +11,20 @@ import { RouterLink } from '@angular/router';
 import { GroupView, TournamentStore } from '../../services/tournament-store';
 import { StandingsTable } from '../../shared/standings-table';
 import { SuitBadge } from '../../shared/suit-badge';
-import { normalizeRounds } from '../../services/schedule';
 
 interface TitleSlide {
   kind: 'title';
 }
-interface GroupSlide {
-  kind: 'group';
+interface GroupsOverviewSlide {
+  kind: 'groups-overview';
   stage: 'Gruppenphase' | 'Finalrunde';
-  view: GroupView;
-  suitIndex: number;
-  /** First round with missing results (0-based), or null if complete. */
-  nextRound: number | null;
+  views: GroupView[];
   highlightTop: number;
 }
 interface KoSlide {
   kind: 'ko';
 }
-type Slide = TitleSlide | GroupSlide | KoSlide;
+type Slide = TitleSlide | GroupsOverviewSlide | KoSlide;
 
 const SLIDE_INTERVAL_MS = 12_000;
 
@@ -53,26 +49,24 @@ export class PresentPage {
   protected readonly slides = computed<Slide[]>(() => {
     const t = this.store.tournament();
     const slides: Slide[] = [{ kind: 'title' }];
-    this.store.groupViews().forEach((view, i) => {
+    const groupViews = this.store.groupViews();
+    if (groupViews.length > 0) {
       slides.push({
-        kind: 'group',
+        kind: 'groups-overview',
         stage: 'Gruppenphase',
-        view,
-        suitIndex: i,
-        nextRound: this.nextRound(view, t.groupRounds, t.groupScores),
+        views: groupViews,
         highlightTop: t.qualifiersPerGroup,
       });
-    });
-    this.store.finalGroupViews().forEach((view, i) => {
+    }
+    const finalGroupViews = this.store.finalGroupViews();
+    if (finalGroupViews.length > 0) {
       slides.push({
-        kind: 'group',
+        kind: 'groups-overview',
         stage: 'Finalrunde',
-        view,
-        suitIndex: i,
-        nextRound: this.nextRound(view, t.finalRounds, t.finalScores),
+        views: finalGroupViews,
         highlightTop: 1,
       });
-    });
+    }
     if (t.ko.hf1.teamA || t.ko.hf2.teamA) {
       slides.push({ kind: 'ko' });
     }
@@ -153,8 +147,8 @@ export class PresentPage {
     switch (slide.kind) {
       case 'title':
         return 'Titel';
-      case 'group':
-        return slide.view.group.name;
+      case 'groups-overview':
+        return slide.stage;
       case 'ko':
         return 'KO-Phase';
     }
@@ -162,13 +156,5 @@ export class PresentPage {
 
   protected teamName(id: string | null): string {
     return this.store.team(id)?.name ?? '…';
-  }
-
-  private nextRound(view: GroupView, roundCount: number, scores: Record<string, (number | null)[]>): number | null {
-    for (let r = 0; r < roundCount; r++) {
-      const open = view.group.teamIds.some((id) => normalizeRounds(scores[id], roundCount)[r] === null);
-      if (open) return r;
-    }
-    return null;
   }
 }

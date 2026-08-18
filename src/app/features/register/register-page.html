@@ -1,0 +1,66 @@
+<header class="page-head">
+  <h1>Anmeldung</h1>
+  <p class="lede">Team für das Jassturnier anmelden. Der Organisator meldet sich anschliessend mit den Zahlungsinformationen bei dir.</p>
+</header>
+
+@if (submitted()) {
+  <div class="card success">
+    <h2>Danke für die Anmeldung!</h2>
+    <p>Dein Team ist eingetragen. Du erhältst die Zahlungsinformationen direkt vom Organisator.</p>
+  </div>
+} @else {
+  <form class="card" [formGroup]="form" (ngSubmit)="submit()">
+    <h2>Team</h2>
+    <div class="field-grid">
+      <div class="field wide">
+        <label for="reg-team">Teamname</label>
+        <input id="reg-team" type="text" formControlName="teamName" required />
+      </div>
+      <div class="field">
+        <label for="reg-p1">Spieler:in 1</label>
+        <input id="reg-p1" type="text" formControlName="p1" />
+      </div>
+      <div class="field">
+        <label for="reg-p2">Spieler:in 2</label>
+        <input id="reg-p2" type="text" formControlName="p2" />
+      </div>
+    </div>
+
+    <h2>Kontakt</h2>
+    <div class="field-grid">
+      <div class="field">
+        <label for="reg-name">Name</label>
+        <input id="reg-name" type="text" formControlName="contactName" required />
+      </div>
+      <div class="field">
+        <label for="reg-email">E-Mail</label>
+        <input id="reg-email" type="email" formControlName="contactEmail" required />
+      </div>
+      <div class="field">
+        <label for="reg-phone">Telefon (optional)</label>
+        <input id="reg-phone" type="tel" formControlName="phone" />
+      </div>
+      <div class="field wide">
+        <label for="reg-note">Bemerkung (optional)</label>
+        <textarea id="reg-note" formControlName="note" rows="3"></textarea>
+      </div>
+    </div>
+
+    <div class="honeypot" aria-hidden="true">
+      <label for="reg-website">Website</label>
+      <input id="reg-website" type="text" formControlName="website" tabindex="-1" autocomplete="off" />
+    </div>
+
+    @if (error(); as message) {
+      <p class="error">{{ message }}</p>
+    }
+
+    <button type="submit" class="btn" [disabled]="form.invalid || submitting()">
+      @if (submitting()) {
+        Wird gesendet…
+      } @else {
+        Anmeldung senden
+      }
+    </button>
+  </form>
+}

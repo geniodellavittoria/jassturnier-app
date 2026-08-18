@@ -1,0 +1,140 @@
+:host {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.login {
+  max-inline-size: 24rem;
+
+  h2 {
+    margin: 0 0 0.9rem;
+  }
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-block-end: 0.9rem;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.9rem 1.2rem;
+  margin-block-end: 1.1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.3rem;
+
+  label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-soft);
+  }
+
+  input,
+  textarea {
+    padding: 0.5rem 0.6rem;
+    font: inherit;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--input-border);
+    border-radius: 0.45rem;
+    resize: vertical;
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+  }
+
+  &.wide {
+    grid-column: 1 / -1;
+  }
+}
+
+.saved-hint {
+  margin-inline-start: 0.8rem;
+  color: var(--brand);
+  font-size: 0.9rem;
+}
+
+.error {
+  margin: 0.6rem 0;
+  color: var(--negative);
+}
+
+.empty {
+  color: var(--text-soft);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.registrations {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+
+  th,
+  td {
+    padding: 0.55rem 0.7rem;
+    text-align: start;
+    vertical-align: top;
+    border-block-end: 1px solid var(--table-rule);
+    white-space: nowrap;
+  }
+
+  th {
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+    border-block-end: 2px solid var(--table-rule-strong);
+  }
+
+  td {
+    white-space: normal;
+  }
+
+  .team-name {
+    display: block;
+    font-weight: 700;
+  }
+
+  .note {
+    display: block;
+    font-size: 0.82em;
+    color: var(--text-soft);
+  }
+
+  .contact-email {
+    display: block;
+    color: var(--text-soft);
+    font-size: 0.9em;
+  }
+
+  select {
+    padding: 0.35rem 0.5rem;
+    font: inherit;
+    border: 1px solid var(--input-border);
+    border-radius: 0.4rem;
+    background: var(--surface);
+  }
+}
+
+.email-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+}
