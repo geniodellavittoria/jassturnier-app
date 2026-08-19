@@ -14,6 +14,16 @@ import { StandingsEntry } from '../models/tournament';
   template: `
     <table class="standings">
       <caption class="visually-hidden">Rangliste {{ caption() }}</caption>
+      @if (compact()) {
+        <colgroup>
+          <col [style.inline-size.%]="colWidths().rank" />
+          <col [style.inline-size.%]="colWidths().team" />
+          @for (r of roundIndexes(); track r) {
+            <col [style.inline-size.%]="colWidths().round" />
+          }
+          <col [style.inline-size.%]="colWidths().total" />
+        </colgroup>
+      }
       <thead>
         <tr>
           <th scope="col" class="num">Rang</th>
@@ -138,6 +148,10 @@ import { StandingsEntry } from '../models/tournament';
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
+        max-inline-size: 100%;
+      }
+      td:nth-child(2) {
+        overflow: hidden;
       }
       .total {
         font-size: 1em;
@@ -157,6 +171,16 @@ export class StandingsTable {
   protected readonly roundIndexes = computed(() => {
     const first = this.entries()[0];
     return first ? first.rounds.map((_, i) => i) : [];
+  });
+
+  /** Column widths (%) for compact mode — Team gets the lion's share so names stay readable. */
+  protected readonly colWidths = computed(() => {
+    const rank = 6;
+    const total = 10;
+    const team = 52;
+    const roundCount = Math.max(1, this.roundIndexes().length);
+    const round = (100 - rank - total - team) / roundCount;
+    return { rank, team, round, total };
   });
 
   protected readonly hasDrop = computed(() => this.entries().some((e) => e.droppedRound !== null));
