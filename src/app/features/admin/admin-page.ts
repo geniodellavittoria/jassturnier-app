@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { PaymentSettings, Registration, RegistrationStatus } from '../../models/registration';
+import { AdminAuth } from '../../services/admin-auth';
 import { RegistrationApi } from '../../services/registration-api';
 import { TournamentStore } from '../../services/tournament-store';
 
@@ -26,9 +28,10 @@ export class AdminPage {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly api = inject(RegistrationApi);
   private readonly store = inject(TournamentStore);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  protected readonly auth = inject(AdminAuth);
 
-  protected readonly checking = signal(true);
-  protected readonly authenticated = signal(false);
   protected readonly loginError = signal<string | null>(null);
   protected readonly loggingIn = signal(false);
 
@@ -57,15 +60,16 @@ export class AdminPage {
   }
 
   private async checkSession(): Promise<void> {
-    const registrations = await this.api.listRegistrations();
-    if (registrations === null) {
-      this.checking.set(false);
+    const ok = await this.auth.ensureChecked();
+    if (!ok) return;
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    if (returnUrl) {
+      void this.router.navigateByUrl(returnUrl);
       return;
     }
-    this.authenticated.set(true);
-    this.registrations.set(registrations);
+    const registrations = await this.api.listRegistrations();
+    this.registrations.set(registrations ?? []);
     await this.loadSettings();
-    this.checking.set(false);
   }
 
   private async loadSettings(): Promise<void> {
@@ -93,22 +97,25 @@ export class AdminPage {
     if (this.loginForm.invalid || this.loggingIn()) return;
     this.loggingIn.set(true);
     this.loginError.set(null);
-    const ok = await this.api.login(this.loginForm.getRawValue().password);
+    const ok = await this.auth.login(this.loginForm.getRawValue().password);
     this.loggingIn.set(false);
     if (!ok) {
       this.loginError.set('Falsches Passwort.');
       return;
     }
-    this.authenticated.set(true);
     this.loginForm.reset();
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    if (returnUrl) {
+      void this.router.navigateByUrl(returnUrl);
+      return;
+    }
     const registrations = await this.api.listRegistrations();
     this.registrations.set(registrations ?? []);
     await this.loadSettings();
   }
 
   protected async logout(): Promise<void> {
-    await this.api.logout();
-    this.authenticated.set(false);
+    await this.auth.logout();
     this.registrations.set([]);
   }
 

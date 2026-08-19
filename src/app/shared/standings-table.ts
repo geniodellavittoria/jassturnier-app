@@ -8,6 +8,9 @@ import { StandingsEntry } from '../models/tournament';
 @Component({
   selector: 'app-standings-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[class.compact]': 'compact()',
+  },
   template: `
     <table class="standings">
       <caption class="visually-hidden">Rangliste {{ caption() }}</caption>
@@ -45,7 +48,7 @@ import { StandingsEntry } from '../models/tournament';
         }
       </tbody>
     </table>
-    @if (hasDrop()) {
+    @if (hasDrop() && !compact()) {
       <p class="drop-hint">Durchgestrichene Punkte = Streichresultat (schlechteste Runde zählt nicht).</p>
     }
   `,
@@ -110,6 +113,36 @@ import { StandingsEntry } from '../models/tournament';
       font-size: 0.8rem;
       color: var(--text-soft);
     }
+
+    /* Dense mode for the presentation overview: sized to the group-card's
+       container height (via cqh) so every group fits on screen without
+       scrolling, whatever the team/round count turns out to be. */
+    :host.compact {
+      block-size: 100%;
+
+      .standings {
+        block-size: 100%;
+        table-layout: fixed;
+        font-size: clamp(0.5rem, calc(100cqh / var(--table-row-count, 7) * 0.42), 1.05rem);
+      }
+      th,
+      td {
+        padding: clamp(0rem, calc(100cqh / var(--table-row-count, 7) * 0.12), 0.35rem)
+          clamp(0.12rem, 1cqw, 0.5rem);
+      }
+      thead th {
+        font-size: clamp(0.42rem, calc(100cqh / var(--table-row-count, 7) * 0.26), 0.68rem);
+      }
+      .team-name {
+        display: block;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+      .total {
+        font-size: 1em;
+      }
+    }
   `,
 })
 export class StandingsTable {
@@ -118,6 +151,8 @@ export class StandingsTable {
   /** Ranks 1..n marked as qualifying for the next stage (0 = none). */
   readonly highlightTop = input(0);
   readonly showPlayers = input(true);
+  /** Dense sizing for many-groups-at-once overviews (e.g. the presentation). */
+  readonly compact = input(false);
 
   protected readonly roundIndexes = computed(() => {
     const first = this.entries()[0];

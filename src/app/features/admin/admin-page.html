@@ -3,9 +3,9 @@
   <p class="lede">Anmeldungen prüfen und Zahlungsinformationen konfigurieren.</p>
 </header>
 
-@if (checking()) {
+@if (auth.authenticated() === null) {
   <p>Lädt…</p>
-} @else if (!authenticated()) {
+} @else if (!auth.authenticated()) {
   <form class="card login" [formGroup]="loginForm" (ngSubmit)="login()">
     <h2>Anmelden</h2>
     <div class="field">

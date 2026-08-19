@@ -8,7 +8,9 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { AdminAuth } from '../../services/admin-auth';
 import { GroupView, TournamentStore } from '../../services/tournament-store';
+import { SecretTap } from '../../shared/secret-tap';
 import { StandingsTable } from '../../shared/standings-table';
 import { SuitBadge } from '../../shared/suit-badge';
 
@@ -20,6 +22,9 @@ interface GroupsOverviewSlide {
   stage: 'Gruppenphase' | 'Finalrunde';
   views: GroupView[];
   highlightTop: number;
+  cols: number;
+  rows: number;
+  tableRowCount: number;
 }
 interface KoSlide {
   kind: 'ko';
@@ -28,10 +33,21 @@ type Slide = TitleSlide | GroupsOverviewSlide | KoSlide;
 
 const SLIDE_INTERVAL_MS = 12_000;
 
+/** Near-square grid biased toward a widescreen (~16:9) layout, minimizing empty cells. */
+function gridDims(count: number): { cols: number; rows: number } {
+  let cols = Math.max(1, Math.ceil(Math.sqrt(count * 1.6)));
+  let rows = Math.ceil(count / cols);
+  while (cols > 1 && (cols - 1) * rows >= count) {
+    cols--;
+    rows = Math.ceil(count / cols);
+  }
+  return { cols, rows };
+}
+
 @Component({
   selector: 'app-present-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, StandingsTable, SuitBadge],
+  imports: [RouterLink, StandingsTable, SuitBadge, SecretTap],
   templateUrl: './present-page.html',
   styleUrl: './present-page.scss',
   host: {
@@ -41,6 +57,7 @@ const SLIDE_INTERVAL_MS = 12_000;
 })
 export class PresentPage {
   protected readonly store = inject(TournamentStore);
+  protected readonly auth = inject(AdminAuth);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly index = signal(0);
@@ -51,20 +68,28 @@ export class PresentPage {
     const slides: Slide[] = [{ kind: 'title' }];
     const groupViews = this.store.groupViews();
     if (groupViews.length > 0) {
+      const { cols, rows } = gridDims(groupViews.length);
       slides.push({
         kind: 'groups-overview',
         stage: 'Gruppenphase',
         views: groupViews,
         highlightTop: t.qualifiersPerGroup,
+        cols,
+        rows,
+        tableRowCount: Math.max(...groupViews.map((v) => v.standings.length)) + 1,
       });
     }
     const finalGroupViews = this.store.finalGroupViews();
     if (finalGroupViews.length > 0) {
+      const { cols, rows } = gridDims(finalGroupViews.length);
       slides.push({
         kind: 'groups-overview',
         stage: 'Finalrunde',
         views: finalGroupViews,
         highlightTop: 1,
+        cols,
+        rows,
+        tableRowCount: Math.max(...finalGroupViews.map((v) => v.standings.length)) + 1,
       });
     }
     if (t.ko.hf1.teamA || t.ko.hf2.teamA) {

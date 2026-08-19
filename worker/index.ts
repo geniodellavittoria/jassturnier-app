@@ -1,4 +1,11 @@
-import { clearSessionCookie, createSessionCookie, requireAdmin, timingSafeEqual, type Env } from './auth';
+import {
+  clearSessionCookie,
+  createSessionCookie,
+  isAuthenticated,
+  requireAdmin,
+  timingSafeEqual,
+  type Env,
+} from './auth';
 
 interface RegisterBody {
   teamName?: string;
@@ -173,6 +180,9 @@ export default {
     if (path === '/api/register' && method === 'POST') return handleRegister(request, env);
     if (path === '/api/admin/login' && method === 'POST') return handleLogin(request, env);
     if (path === '/api/admin/logout' && method === 'POST') return handleLogout();
+    if (path === '/api/admin/session' && method === 'GET') {
+      return json({ authenticated: await isAuthenticated(request, env) });
+    }
 
     if (path === '/api/admin/registrations' && method === 'GET') {
       const unauthorized = await requireAdmin(request, env);

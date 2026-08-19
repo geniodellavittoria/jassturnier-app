@@ -11,6 +11,15 @@ export class RegistrationApi {
     return firstValueFrom(this.http.post<{ ok: true }>('/api/register', input)).then(() => undefined);
   }
 
+  async checkSession(): Promise<boolean> {
+    try {
+      const res = await firstValueFrom(this.http.get<{ authenticated: boolean }>('/api/admin/session'));
+      return res.authenticated;
+    } catch {
+      return false;
+    }
+  }
+
   async login(password: string): Promise<boolean> {
     try {
       await firstValueFrom(this.http.post('/api/admin/login', { password }));

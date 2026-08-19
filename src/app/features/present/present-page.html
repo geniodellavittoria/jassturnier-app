@@ -1,7 +1,9 @@
 <div class="frame">
   <header class="topbar">
-    <a routerLink="/gruppen" class="chalk-link">‹ Zurück zur Eingabe</a>
-    <p class="wordmark" aria-hidden="true">{{ store.tournament().name }}</p>
+    @if (auth.authenticated()) {
+      <a routerLink="/gruppen" class="chalk-link">‹ Zurück zur Eingabe</a>
+    }
+    <p class="wordmark" aria-hidden="true" appSecretTap="/verwaltung">{{ store.tournament().name }}</p>
     <div class="controls">
       <button type="button" class="chalk-btn" (click)="togglePause()" [attr.aria-pressed]="paused()">
         @if (paused()) {
@@ -40,20 +42,25 @@
                 <h1>{{ slide.stage === 'Gruppenphase' ? 'Gruppen' : 'Finalgruppen' }}</h1>
               </header>
 
-              <div class="groups-grid">
+              <div
+                class="groups-grid"
+                [style.--group-cols]="slide.cols"
+                [style.--group-rows]="slide.rows"
+                [style.--table-row-count]="slide.tableRowCount"
+              >
                 @for (view of slide.views; track view.group.id; let i = $index) {
                   <section class="group-card">
                     <header class="card-head">
                       <app-suit-badge [index]="i" />
                       <h2>{{ view.group.name }}</h2>
                     </header>
-                    <div class="table-scroll">
+                    <div class="card-table">
                       <app-standings-table
-                        class="chalk-table mini-table"
                         [entries]="view.standings"
                         [caption]="view.group.name"
                         [highlightTop]="slide.highlightTop"
                         [showPlayers]="false"
+                        [compact]="true"
                       />
                     </div>
                   </section>
