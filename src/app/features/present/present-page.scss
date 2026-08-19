@@ -169,9 +169,14 @@
 }
 
 .group-card {
+  min-inline-size: 0;
   padding: clamp(0.8rem, 1.6vw, 1.2rem);
   border: 1px solid var(--table-rule);
   border-radius: 0.6rem;
+}
+
+.table-scroll {
+  overflow-x: auto;
 }
 
 .card-head {

@@ -47,13 +47,15 @@
                       <app-suit-badge [index]="i" />
                       <h2>{{ view.group.name }}</h2>
                     </header>
-                    <app-standings-table
-                      class="chalk-table mini-table"
-                      [entries]="view.standings"
-                      [caption]="view.group.name"
-                      [highlightTop]="slide.highlightTop"
-                      [showPlayers]="false"
-                    />
+                    <div class="table-scroll">
+                      <app-standings-table
+                        class="chalk-table mini-table"
+                        [entries]="view.standings"
+                        [caption]="view.group.name"
+                        [highlightTop]="slide.highlightTop"
+                        [showPlayers]="false"
+                      />
+                    </div>
                   </section>
                 }
               </div>
