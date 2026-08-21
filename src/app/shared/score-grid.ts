@@ -28,7 +28,7 @@ export interface ScoreChange {
           <tr>
             <th scope="row">{{ team.name }}</th>
             @for (r of roundIndexes(); track r) {
-              <td>
+              <td class="num">
                 <input
                   type="number"
                   inputmode="numeric"
@@ -69,7 +69,7 @@ export interface ScoreChange {
       text-transform: uppercase;
       color: var(--text-soft);
     }
-    thead .num {
+    .num {
       text-align: end;
     }
     tbody th {

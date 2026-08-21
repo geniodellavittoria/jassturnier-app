@@ -25,6 +25,26 @@ export function countMismatches(schedule: Pairing[][], scores: ScoreMap, max: nu
   return count;
 }
 
+// Fixed reference schedule for 4-team groups (matches the tournament's
+// canonical Excel sheet) — used by the Finalrunde groups, which are always
+// drawn in fours. A valid complete round-robin (all 6 pairs among 4 teams
+// appear exactly once across 3 rounds), different pairing order than the
+// generic circle-method algorithm below produces.
+const FOUR_TEAM_SCHEDULE: [number, number][][] = [
+  [
+    [1, 2],
+    [3, 4],
+  ],
+  [
+    [1, 3],
+    [2, 4],
+  ],
+  [
+    [4, 1],
+    [2, 3],
+  ],
+];
+
 // Fixed reference schedule for 6-team groups (matches the tournament's
 // canonical Excel sheet) — a valid complete round-robin (all 15 pairs among
 // 6 teams appear exactly once across 5 rounds), but a different pairing
@@ -58,20 +78,23 @@ const SIX_TEAM_SCHEDULE: [number, number][][] = [
   ],
 ];
 
+function fixedSchedule(ids: string[], table: [number, number][][]): Pairing[][] {
+  return table.map((round) =>
+    round.map(([home, away], i) => ({ table: i + 1, homeId: ids[home - 1], awayId: ids[away - 1] })),
+  );
+}
+
 /**
- * Round-robin schedule. Six-team groups use the fixed reference order above;
- * every other size uses the circle method, which for n teams yields n-1
- * rounds (n rounds if n is odd, with one team pausing per round).
+ * Round-robin schedule. Four- and six-team groups use the fixed reference
+ * orders above; every other size uses the circle method, which for n teams
+ * yields n-1 rounds (n rounds if n is odd, with one team pausing per round).
  * Deterministic for a given team order.
  */
 export function roundRobin(teamIds: string[]): Pairing[][] {
   const ids = [...teamIds];
   if (ids.length < 2) return [];
-  if (ids.length === 6) {
-    return SIX_TEAM_SCHEDULE.map((round) =>
-      round.map(([home, away], i) => ({ table: i + 1, homeId: ids[home - 1], awayId: ids[away - 1] })),
-    );
-  }
+  if (ids.length === 4) return fixedSchedule(ids, FOUR_TEAM_SCHEDULE);
+  if (ids.length === 6) return fixedSchedule(ids, SIX_TEAM_SCHEDULE);
   const bye = ids.length % 2 === 1;
   if (bye) ids.push('__bye__');
   const n = ids.length;
