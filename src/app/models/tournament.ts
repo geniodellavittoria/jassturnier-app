@@ -1,3 +1,6 @@
+/** Fixed total pot of points available in a single Jass match — both teams' points must sum to this. */
+export const MAX_MATCH_POINTS = 1884;
+
 export interface Team {
   id: string;
   name: string;

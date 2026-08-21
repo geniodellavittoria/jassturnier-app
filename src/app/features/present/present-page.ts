@@ -7,12 +7,17 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { fromEvent, map } from 'rxjs';
 import { AdminAuth } from '../../services/admin-auth';
 import { GroupView, TournamentStore } from '../../services/tournament-store';
 import { SecretTap } from '../../shared/secret-tap';
 import { StandingsTable } from '../../shared/standings-table';
 import { SuitBadge } from '../../shared/suit-badge';
+
+// Keep in sync with the `@media (max-width: 48rem)` breakpoint in present-page.scss.
+const NARROW_BREAKPOINT_PX = 768;
 
 interface TitleSlide {
   kind: 'title';
@@ -63,12 +68,19 @@ export class PresentPage {
   protected readonly index = signal(0);
   protected readonly paused = signal(false);
 
+  /** True below the mobile breakpoint — forces single-column slide layout and disables auto-advance. */
+  protected readonly isNarrow = toSignal(
+    fromEvent(window, 'resize').pipe(map(() => window.innerWidth <= NARROW_BREAKPOINT_PX)),
+    { initialValue: window.innerWidth <= NARROW_BREAKPOINT_PX },
+  );
+
   protected readonly slides = computed<Slide[]>(() => {
     const t = this.store.tournament();
+    const narrow = this.isNarrow();
     const slides: Slide[] = [{ kind: 'title' }];
     const groupViews = this.store.groupViews();
     if (groupViews.length > 0) {
-      const { cols, rows } = gridDims(groupViews.length);
+      const { cols, rows } = narrow ? { cols: 1, rows: groupViews.length } : gridDims(groupViews.length);
       slides.push({
         kind: 'groups-overview',
         stage: 'Gruppenphase',
@@ -81,7 +93,9 @@ export class PresentPage {
     }
     const finalGroupViews = this.store.finalGroupViews();
     if (finalGroupViews.length > 0) {
-      const { cols, rows } = gridDims(finalGroupViews.length);
+      const { cols, rows } = narrow
+        ? { cols: 1, rows: finalGroupViews.length }
+        : gridDims(finalGroupViews.length);
       slides.push({
         kind: 'groups-overview',
         stage: 'Finalrunde',
@@ -116,7 +130,7 @@ export class PresentPage {
 
   constructor() {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-    if (reduced.matches) this.paused.set(true);
+    if (reduced.matches || this.isNarrow()) this.paused.set(true);
     const timer = setInterval(() => {
       if (!this.paused() && this.slides().length > 1) this.next();
     }, SLIDE_INTERVAL_MS);

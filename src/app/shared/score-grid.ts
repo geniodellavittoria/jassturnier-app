@@ -77,7 +77,7 @@ export interface ScoreChange {
     }
     input {
       inline-size: 5.5rem;
-      padding: 0.45rem 0.5rem;
+      padding: 0.6rem 0.5rem;
       font: inherit;
       font-variant-numeric: tabular-nums;
       text-align: end;

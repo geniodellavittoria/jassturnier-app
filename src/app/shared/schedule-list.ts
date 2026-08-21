@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { Team } from '../models/tournament';
-import { Pairing } from '../services/schedule';
+import { MAX_MATCH_POINTS, ScoreMap, Team } from '../models/tournament';
+import { matchPointsMismatch, Pairing } from '../services/schedule';
 
 /** The Spielplan of one group: who plays whom in every round. */
 @Component({
@@ -8,9 +8,9 @@ import { Pairing } from '../services/schedule';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ol class="rounds">
-      @for (round of schedule(); track $index) {
+      @for (round of schedule(); track $index; let roundIndex = $index) {
         <li class="round">
-          <h4>Runde {{ $index + 1 }}</h4>
+          <h4>Runde {{ roundIndex + 1 }}</h4>
           <ul class="pairings">
             @for (pairing of round; track pairing.table) {
               <li>
@@ -21,6 +21,11 @@ import { Pairing } from '../services/schedule';
                   <span class="visually-hidden">gegen</span>
                   {{ teamName(pairing.awayId) }}
                 </span>
+                @if (mismatch(pairing, roundIndex)) {
+                  <span class="sum-warning">
+                    ⚠ {{ pairSum(pairing, roundIndex) }} statt {{ maxPoints }}
+                  </span>
+                }
               </li>
             }
           </ul>
@@ -77,13 +82,32 @@ import { Pairing } from '../services/schedule';
       color: var(--accent);
       padding-inline: 0.15rem;
     }
+    .sum-warning {
+      font-size: 0.72rem;
+      color: var(--negative);
+    }
   `,
 })
 export class ScheduleList {
   readonly schedule = input.required<Pairing[][]>();
   readonly teams = input.required<Record<string, Team>>();
+  readonly scores = input.required<ScoreMap>();
+
+  protected readonly maxPoints = MAX_MATCH_POINTS;
 
   protected teamName(id: string): string {
     return this.teams()[id]?.name ?? '?';
+  }
+
+  private pointsFor(teamId: string, round: number): number | null {
+    return this.scores()[teamId]?.[round] ?? null;
+  }
+
+  protected pairSum(pairing: Pairing, round: number): number {
+    return (this.pointsFor(pairing.homeId, round) ?? 0) + (this.pointsFor(pairing.awayId, round) ?? 0);
+  }
+
+  protected mismatch(pairing: Pairing, round: number): boolean {
+    return matchPointsMismatch(this.pointsFor(pairing.homeId, round), this.pointsFor(pairing.awayId, round));
   }
 }

@@ -50,8 +50,17 @@
           </div>
         </div>
         <details>
-          <summary>Spielplan anzeigen</summary>
-          <app-schedule-list [schedule]="view.schedule" [teams]="store.tournament().teams" />
+          <summary>
+            Spielplan anzeigen
+            @if (mismatchCount(view.schedule); as count) {
+              ({{ count }} Abweichung{{ count === 1 ? '' : 'en' }})
+            }
+          </summary>
+          <app-schedule-list
+            [schedule]="view.schedule"
+            [teams]="store.tournament().teams"
+            [scores]="store.tournament().finalScores"
+          />
         </details>
       </section>
     }

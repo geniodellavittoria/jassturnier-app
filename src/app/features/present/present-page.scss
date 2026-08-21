@@ -52,13 +52,16 @@
 
 .chalk-link,
 .chalk-btn {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2.75rem;
   font: inherit;
   font-size: 0.85rem;
   color: var(--chalk);
   background: transparent;
   border: 1px solid var(--table-rule-strong);
   border-radius: 999px;
-  padding: 0.35rem 0.85rem;
+  padding: 0.55rem 0.85rem;
   text-decoration: none;
   cursor: pointer;
 
@@ -342,15 +345,29 @@
 }
 
 .dot {
-  inline-size: 0.8rem;
-  block-size: 0.8rem;
+  // Visible dot stays small; the button box is the full 44px touch target.
+  position: relative;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
   padding: 0;
+  border: none;
   border-radius: 50%;
-  border: 1px solid var(--table-rule-strong);
   background: transparent;
   cursor: pointer;
 
-  &.active {
+  &::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: 0.8rem;
+    block-size: 0.8rem;
+    translate: -50% -50%;
+    border-radius: 50%;
+    border: 1px solid var(--table-rule-strong);
+  }
+
+  &.active::before {
     background: var(--gold);
     border-color: var(--gold);
   }
@@ -367,4 +384,38 @@
   font-size: 0.75rem;
   letter-spacing: 0.06em;
   color: var(--text-soft);
+}
+
+// ── Mobile/portrait layout ───────────────────────────────────────────────────
+// Keep this breakpoint in sync with NARROW_BREAKPOINT_PX in present-page.ts.
+@media (max-width: 48rem), (orientation: portrait) {
+  .frame {
+    block-size: auto;
+    min-block-size: 100dvh;
+    max-block-size: none;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .slide.wide {
+    block-size: auto;
+  }
+
+  .title-slide h1 {
+    font-size: clamp(1.8rem, 9vw, 3rem);
+  }
+
+  .groups-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+  }
+
+  .group-card {
+    // A stacked, full-width card has no reliable block-size to query (cqh),
+    // so switch to inline-size containment with an explicit min-height —
+    // standings-table.ts has a matching mobile override for its compact mode.
+    container-type: inline-size;
+    min-block-size: 20rem;
+    block-size: auto;
+  }
 }

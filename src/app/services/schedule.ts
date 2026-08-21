@@ -1,10 +1,32 @@
-import { ScoreMap, StandingsEntry, Team } from '../models/tournament';
+import { MAX_MATCH_POINTS, ScoreMap, StandingsEntry, Team } from '../models/tournament';
 
 export interface Pairing {
   /** 1-based table number within the round. */
   table: number;
   homeId: string;
   awayId: string;
+}
+
+/** True once both sides of a match have entered points that don't sum to MAX_MATCH_POINTS. */
+export function matchPointsMismatch(
+  a: number | null,
+  b: number | null,
+  max = MAX_MATCH_POINTS,
+): boolean {
+  return a !== null && b !== null && a + b !== max;
+}
+
+/** Count of mismatched pairings across a whole schedule, given the per-team-per-round scores. */
+export function countMismatches(schedule: Pairing[][], scores: ScoreMap, max = MAX_MATCH_POINTS): number {
+  let count = 0;
+  schedule.forEach((round, r) => {
+    round.forEach((pairing) => {
+      const home = scores[pairing.homeId]?.[r] ?? null;
+      const away = scores[pairing.awayId]?.[r] ?? null;
+      if (matchPointsMismatch(home, away, max)) count++;
+    });
+  });
+  return count;
 }
 
 /**

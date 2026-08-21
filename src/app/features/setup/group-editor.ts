@@ -118,7 +118,7 @@ import { SuitBadge } from '../../shared/suit-badge';
       border-block-start: 1px dashed var(--table-rule-strong);
     }
     input {
-      padding: 0.5rem 0.6rem;
+      padding: 0.6rem 0.6rem;
       font: inherit;
       color: var(--text);
       background: var(--surface);
@@ -138,6 +138,15 @@ import { SuitBadge } from '../../shared/suit-badge';
       .team-row .team-name,
       .add-team input[formControlName='name'] {
         grid-column: 1 / -1;
+      }
+    }
+    @media (max-width: 30rem) {
+      .team-row,
+      .add-team {
+        grid-template-columns: 1fr;
+      }
+      .team-row .btn-quiet {
+        justify-self: start;
       }
     }
   `,

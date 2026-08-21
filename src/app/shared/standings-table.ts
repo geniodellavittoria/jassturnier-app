@@ -12,7 +12,8 @@ import { StandingsEntry } from '../models/tournament';
     '[class.compact]': 'compact()',
   },
   template: `
-    <table class="standings">
+    <div class="table-wrap">
+    <table class="standings" [style.--table-num-col]="numColWidth()">
       <caption class="visually-hidden">Rangliste {{ caption() }}</caption>
       @if (compact()) {
         <colgroup>
@@ -58,6 +59,7 @@ import { StandingsEntry } from '../models/tournament';
         }
       </tbody>
     </table>
+    </div>
     @if (hasDrop() && !compact()) {
       <p class="drop-hint">Durchgestrichene Punkte = Streichresultat (schlechteste Runde zählt nicht).</p>
     }
@@ -65,6 +67,9 @@ import { StandingsEntry } from '../models/tournament';
   styles: `
     :host {
       display: block;
+    }
+    .table-wrap {
+      overflow-x: auto;
     }
     .standings {
       inline-size: 100%;
@@ -130,10 +135,26 @@ import { StandingsEntry } from '../models/tournament';
     :host.compact {
       block-size: 100%;
 
+      .table-wrap {
+        overflow-x: visible;
+        block-size: 100%;
+      }
+
       .standings {
         block-size: 100%;
         table-layout: fixed;
-        font-size: clamp(0.5rem, calc(100cqh / var(--table-row-count, 7) * 0.42), 1.05rem);
+        /* Bound by both row count (height) and the narrowest numeric column's
+           width — a group with few rows but many round columns would otherwise
+           get a font sized for its height alone, overflowing the round/total
+           cells and bleeding the point values into neighboring columns. */
+        font-size: clamp(
+          0.5rem,
+          min(
+            calc(100cqh / var(--table-row-count, 7) * 0.42),
+            calc(var(--table-num-col, 6) * 1cqw * 0.42)
+          ),
+          1.05rem
+        );
       }
       th,
       td {
@@ -153,8 +174,25 @@ import { StandingsEntry } from '../models/tournament';
       td:nth-child(2) {
         overflow: hidden;
       }
+      .num {
+        overflow: hidden;
+      }
       .total {
         font-size: 1em;
+      }
+    }
+
+    /* On the presentation page's mobile layout the group-card container only
+       establishes inline-size containment (no reliable cqh), so drop the
+       height-based term and size off cqw + a legible rem floor instead.
+       Keep in sync with the breakpoint in present-page.scss / present-page.ts. */
+    @media (max-width: 48rem), (orientation: portrait) {
+      :host.compact .standings {
+        font-size: clamp(0.75rem, 2.2cqw, 1rem);
+      }
+      :host.compact th,
+      :host.compact td {
+        padding: 0.3rem 0.4rem;
       }
     }
   `,
@@ -181,6 +219,16 @@ export class StandingsTable {
     const roundCount = Math.max(1, this.roundIndexes().length);
     const round = (100 - rank - total - team) / roundCount;
     return { rank, team, round, total };
+  });
+
+  /**
+   * Narrowest numeric column (%, ≈ cqw since the table spans the container's
+   * width) — bounds compact-mode font-size so point values fit their cell
+   * instead of overflowing into the next column.
+   */
+  protected readonly numColWidth = computed(() => {
+    const { round, total } = this.colWidths();
+    return Math.min(round, total);
   });
 
   protected readonly hasDrop = computed(() => this.entries().some((e) => e.droppedRound !== null));

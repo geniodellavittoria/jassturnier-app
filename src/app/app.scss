@@ -66,7 +66,10 @@ nav {
   gap: 0.25rem;
 
   a {
-    padding: 0.45rem 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 2.75rem;
+    padding: 0.65rem 1rem;
     color: var(--paper);
     text-decoration: none;
     font-weight: 600;
@@ -102,5 +105,14 @@ main {
     max-inline-size: none;
     margin: 0;
     padding: 0;
+  }
+}
+
+@media (max-width: 30rem) {
+  .app-header {
+    padding-block: 0.7rem;
+  }
+  .brand-year {
+    display: none;
   }
 }

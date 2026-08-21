@@ -4,6 +4,7 @@ import { TournamentStore } from '../../services/tournament-store';
 import { ScoreGrid, ScoreChange } from '../../shared/score-grid';
 import { StandingsTable } from '../../shared/standings-table';
 import { ScheduleList } from '../../shared/schedule-list';
+import { countMismatches, Pairing } from '../../services/schedule';
 import { KoMatchCard } from './ko-match-card';
 
 @Component({
@@ -26,6 +27,10 @@ export class FinalsPage {
   protected teamsOf(teamIds: string[]) {
     const teams = this.store.tournament().teams;
     return teamIds.map((id) => teams[id]).filter((t) => !!t);
+  }
+
+  protected mismatchCount(schedule: Pairing[][]): number {
+    return countMismatches(schedule, this.store.tournament().finalScores);
   }
 
   protected draw(): void {

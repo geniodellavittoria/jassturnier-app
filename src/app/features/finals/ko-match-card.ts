@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { KoId, KoMatch } from '../../models/tournament';
+import { KoId, KoMatch, MAX_MATCH_POINTS } from '../../models/tournament';
+import { matchPointsMismatch } from '../../services/schedule';
 import { TournamentStore } from '../../services/tournament-store';
 
 /** One KO tie: two teams, one points field each, winner highlighted. */
@@ -37,6 +38,11 @@ import { TournamentStore } from '../../services/tournament-store';
       </div>
       @if (isDraw()) {
         <p class="draw-note">Gleichstand — bitte Stechen spielen und das Resultat anpassen.</p>
+      }
+      @if (pointsMismatch()) {
+        <p class="draw-note">
+          Die Punkte ergeben zusammen {{ pointsSum() }} statt {{ maxPoints }}.
+        </p>
       }
     }
   `,
@@ -85,7 +91,7 @@ import { TournamentStore } from '../../services/tournament-store';
     }
     input {
       inline-size: 5.5rem;
-      padding: 0.45rem 0.5rem;
+      padding: 0.6rem 0.5rem;
       font: inherit;
       font-variant-numeric: tabular-nums;
       text-align: end;
@@ -106,6 +112,14 @@ import { TournamentStore } from '../../services/tournament-store';
       font-size: 0.82rem;
       color: var(--negative);
     }
+    @media (max-width: 30rem) {
+      .side {
+        flex-wrap: wrap;
+      }
+      input {
+        inline-size: 100%;
+      }
+    }
   `,
 })
 export class KoMatchCard {
@@ -124,6 +138,18 @@ export class KoMatchCard {
   protected readonly isDraw = computed(() => {
     const m = this.match();
     return m.pointsA !== null && m.pointsB !== null && m.pointsA === m.pointsB;
+  });
+
+  protected readonly maxPoints = MAX_MATCH_POINTS;
+
+  protected readonly pointsSum = computed(() => {
+    const m = this.match();
+    return (m.pointsA ?? 0) + (m.pointsB ?? 0);
+  });
+
+  protected readonly pointsMismatch = computed(() => {
+    const m = this.match();
+    return matchPointsMismatch(m.pointsA, m.pointsB);
   });
 
   protected teamId(side: 'A' | 'B'): string | null {

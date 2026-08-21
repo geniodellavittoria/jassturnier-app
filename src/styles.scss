@@ -26,11 +26,22 @@
   --negative: var(--rosen);
   --table-rule: #e4ddc8;
   --table-rule-strong: #cfc7ac;
-  --input-border: #bdb69c;
+  --input-border: #948c6e; // darkened from #bdb69c — was 2.0:1 against --surface, now ~3.3:1 (WCAG 1.4.11)
 
   // Type
   --font-display: 'Bricolage Grotesque Variable', 'Instrument Sans', system-ui, sans-serif;
   --font-body: 'Instrument Sans', system-ui, sans-serif;
+  --text-size-sm: 0.8125rem;
+
+  // Spacing scale (4px base)
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 2.5rem;
+  --space-8: 4rem;
 }
 
 *,
@@ -68,12 +79,12 @@ h1 {
 }
 
 h2 {
-  font-size: 1.2rem;
+  font-size: clamp(1.05rem, 1.6vw + 0.7rem, 1.35rem);
   font-weight: 700;
 }
 
 h3 {
-  font-size: 1rem;
+  font-size: clamp(0.95rem, 1vw + 0.7rem, 1.1rem);
   font-weight: 700;
 }
 
@@ -99,8 +110,10 @@ h3 {
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
-  padding: 0.55rem 1.05rem;
+  min-block-size: 2.75rem;
+  padding: 0.65rem 1.05rem;
   font: inherit;
   font-weight: 600;
   color: var(--paper);
@@ -112,6 +125,10 @@ h3 {
 
   &:hover {
     background: color-mix(in srgb, var(--brand) 88%, black);
+  }
+
+  &:active {
+    transform: translateY(1px);
   }
 
   &:focus-visible {
