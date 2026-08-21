@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { Team, ScoreMap } from '../models/tournament';
-import { matchPointsMismatch, maxOf, normalizeRounds, Pairing } from '../services/schedule';
+import { matchPointsMismatch, normalizeRounds, Pairing } from '../services/schedule';
 
 export interface ScoreChange {
   teamId: string;
@@ -111,19 +111,13 @@ export class ScoreGrid {
   readonly schedule = input.required<Pairing[][]>();
   readonly maxPoints = input.required<number>();
   readonly caption = input('');
-  /** Highlight the single highest score entered so far (e.g. group-phase "top score"). */
-  readonly highlightMax = input(false);
+  /** The single highest score across the whole stage (not just this group/page) — highlighted wherever it appears. */
+  readonly topScore = input<number | null>(null);
   readonly scoreChange = output<ScoreChange>();
 
   protected readonly roundIndexes = computed(() =>
     Array.from({ length: this.roundCount() }, (_, i) => i),
   );
-
-  private readonly maxScore = computed(() => {
-    if (!this.highlightMax()) return null;
-    const values = this.teams().flatMap((t) => normalizeRounds(this.scores()[t.id], this.roundCount()));
-    return maxOf(values);
-  });
 
   protected valueFor(teamId: string, round: number): number | string {
     const value = normalizeRounds(this.scores()[teamId], this.roundCount())[round];
@@ -148,7 +142,7 @@ export class ScoreGrid {
   }
 
   protected isTopScore(teamId: string, round: number): boolean {
-    const max = this.maxScore();
+    const max = this.topScore();
     return max !== null && this.scoreFor(teamId, round) === max;
   }
 

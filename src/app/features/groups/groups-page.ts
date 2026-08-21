@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MAX_MATCH_POINTS_GROUP } from '../../models/tournament';
+import { maxOf, normalizeRounds } from '../../services/schedule';
 import { TournamentStore } from '../../services/tournament-store';
 import { ScoreGrid, ScoreChange } from '../../shared/score-grid';
 import { StandingsTable } from '../../shared/standings-table';
@@ -34,6 +35,13 @@ export class GroupsPage {
     if (!view) return [];
     const teams = this.store.tournament().teams;
     return view.group.teamIds.map((id) => teams[id]).filter((t) => !!t);
+  });
+
+  /** Highest single round score across the whole group phase (every group, not just the selected one). */
+  protected readonly topScore = computed(() => {
+    const t = this.store.tournament();
+    const allTeamIds = t.groups.flatMap((g) => g.teamIds);
+    return maxOf(allTeamIds.flatMap((id) => normalizeRounds(t.groupScores[id], t.groupRounds)));
   });
 
   protected select(index: number): void {

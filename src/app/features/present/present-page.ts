@@ -11,6 +11,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { fromEvent, map } from 'rxjs';
 import { AdminAuth } from '../../services/admin-auth';
+import { maxOf, normalizeRounds } from '../../services/schedule';
 import { GroupView, TournamentStore } from '../../services/tournament-store';
 import { SecretTap } from '../../shared/secret-tap';
 import { StandingsTable } from '../../shared/standings-table';
@@ -144,6 +145,13 @@ export class PresentPage {
   protected readonly current = computed<Slide>(() => {
     const slides = this.slides();
     return slides[Math.min(this.index(), slides.length - 1)] ?? { kind: 'title' };
+  });
+
+  /** Highest single round score across the whole group phase (every group). Only shown on the Gruppenphase slide. */
+  protected readonly topGroupScore = computed(() => {
+    const t = this.store.tournament();
+    const allTeamIds = t.groups.flatMap((g) => g.teamIds);
+    return maxOf(allTeamIds.flatMap((id) => normalizeRounds(t.groupScores[id], t.groupRounds)));
   });
 
   protected readonly ko = computed(() => this.store.tournament().ko);

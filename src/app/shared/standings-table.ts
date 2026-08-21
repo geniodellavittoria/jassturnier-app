@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { StandingsEntry } from '../models/tournament';
-import { maxOf } from '../services/schedule';
 
 /**
  * Ranked standings for one group. Renders in the surrounding theme
@@ -219,15 +218,11 @@ export class StandingsTable {
   readonly showPlayers = input(true);
   /** Dense sizing for many-groups-at-once overviews (e.g. the presentation). */
   readonly compact = input(false);
-  /** Highlight the single highest score entered so far (e.g. group-phase "top score"). */
-  readonly highlightMax = input(false);
-
-  private readonly maxScore = computed(() =>
-    this.highlightMax() ? maxOf(this.entries().flatMap((e) => e.rounds)) : null,
-  );
+  /** The single highest score across the whole stage (not just this group) — highlighted wherever it appears. */
+  readonly topScore = input<number | null>(null);
 
   protected isTopScore(value: number | null): boolean {
-    const max = this.maxScore();
+    const max = this.topScore();
     return max !== null && value === max;
   }
 
