@@ -35,6 +35,7 @@
           [schedule]="view.schedule"
           [maxPoints]="maxPoints"
           [caption]="view.group.name"
+          [highlightMax]="true"
           (scoreChange)="onScore($event)"
         />
       </section>
@@ -45,6 +46,7 @@
           [entries]="view.standings"
           [caption]="view.group.name"
           [highlightTop]="store.tournament().qualifiersPerGroup"
+          [highlightMax]="true"
         />
         <p class="hint">
           Die besten {{ store.tournament().qualifiersPerGroup }} Teams (▸) steigen in die Finalrunde auf.

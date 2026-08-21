@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { Team, ScoreMap } from '../models/tournament';
-import { matchPointsMismatch, normalizeRounds, Pairing } from '../services/schedule';
+import { matchPointsMismatch, maxOf, normalizeRounds, Pairing } from '../services/schedule';
 
 export interface ScoreChange {
   teamId: string;
@@ -39,6 +39,7 @@ export interface ScoreChange {
                   [attr.aria-label]="'Punkte ' + team.name + ', Runde ' + (r + 1)"
                   [class.mismatch]="mismatch(team.id, r)"
                   [attr.aria-invalid]="mismatch(team.id, r)"
+                  [class.top-score]="isTopScore(team.id, r)"
                 />
               </td>
             }
@@ -92,6 +93,11 @@ export interface ScoreChange {
       outline: 2px solid var(--accent);
       outline-offset: 1px;
     }
+    input.top-score {
+      border-color: var(--gold);
+      background: color-mix(in srgb, var(--gold) 22%, var(--surface));
+      font-weight: 700;
+    }
     input.mismatch {
       border-color: var(--negative);
       background: color-mix(in srgb, var(--negative) 12%, var(--surface));
@@ -105,11 +111,19 @@ export class ScoreGrid {
   readonly schedule = input.required<Pairing[][]>();
   readonly maxPoints = input.required<number>();
   readonly caption = input('');
+  /** Highlight the single highest score entered so far (e.g. group-phase "top score"). */
+  readonly highlightMax = input(false);
   readonly scoreChange = output<ScoreChange>();
 
   protected readonly roundIndexes = computed(() =>
     Array.from({ length: this.roundCount() }, (_, i) => i),
   );
+
+  private readonly maxScore = computed(() => {
+    if (!this.highlightMax()) return null;
+    const values = this.teams().flatMap((t) => normalizeRounds(this.scores()[t.id], this.roundCount()));
+    return maxOf(values);
+  });
 
   protected valueFor(teamId: string, round: number): number | string {
     const value = normalizeRounds(this.scores()[teamId], this.roundCount())[round];
@@ -131,6 +145,11 @@ export class ScoreGrid {
     const opponentId = this.opponentFor(teamId, round);
     if (!opponentId) return false;
     return matchPointsMismatch(this.scoreFor(teamId, round), this.scoreFor(opponentId, round), this.maxPoints());
+  }
+
+  protected isTopScore(teamId: string, round: number): boolean {
+    const max = this.maxScore();
+    return max !== null && this.scoreFor(teamId, round) === max;
   }
 
   protected onChange(teamId: string, round: number, event: Event): void {

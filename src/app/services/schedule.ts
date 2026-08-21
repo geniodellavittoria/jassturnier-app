@@ -12,6 +12,11 @@ export function matchPointsMismatch(a: number | null, b: number | null, max: num
   return a !== null && b !== null && a + b !== max;
 }
 
+/** The largest value in a list, ignoring nulls; null if every value is null or the list is empty. */
+export function maxOf(values: (number | null)[]): number | null {
+  return values.reduce<number | null>((max, v) => (v !== null && (max === null || v > max) ? v : max), null);
+}
+
 /** Count of mismatched pairings across a whole schedule, given the per-team-per-round scores. */
 export function countMismatches(schedule: Pairing[][], scores: ScoreMap, max: number): number {
   let count = 0;

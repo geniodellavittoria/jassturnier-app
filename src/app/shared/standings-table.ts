@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { StandingsEntry } from '../models/tournament';
+import { maxOf } from '../services/schedule';
 
 /**
  * Ranked standings for one group. Renders in the surrounding theme
@@ -46,7 +47,11 @@ import { StandingsEntry } from '../models/tournament';
               }
             </td>
             @for (value of entry.rounds; track $index) {
-              <td class="num" [class.dropped]="$index === entry.droppedRound">
+              <td
+                class="num"
+                [class.dropped]="$index === entry.droppedRound"
+                [class.top-score]="isTopScore(value)"
+              >
                 @if (value !== null) {
                   {{ value }}
                 } @else {
@@ -110,6 +115,10 @@ import { StandingsEntry } from '../models/tournament';
     .dropped {
       text-decoration: line-through;
       color: var(--text-soft);
+    }
+    .top-score {
+      background: color-mix(in srgb, var(--gold) 25%, var(--surface));
+      font-weight: 700;
     }
     .total {
       font-family: var(--font-display);
@@ -210,6 +219,17 @@ export class StandingsTable {
   readonly showPlayers = input(true);
   /** Dense sizing for many-groups-at-once overviews (e.g. the presentation). */
   readonly compact = input(false);
+  /** Highlight the single highest score entered so far (e.g. group-phase "top score"). */
+  readonly highlightMax = input(false);
+
+  private readonly maxScore = computed(() =>
+    this.highlightMax() ? maxOf(this.entries().flatMap((e) => e.rounds)) : null,
+  );
+
+  protected isTopScore(value: number | null): boolean {
+    const max = this.maxScore();
+    return max !== null && value === max;
+  }
 
   protected readonly roundIndexes = computed(() => {
     const first = this.entries()[0];
