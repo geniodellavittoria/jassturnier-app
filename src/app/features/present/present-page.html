@@ -5,13 +5,15 @@
     }
     <p class="wordmark" aria-hidden="true" appSecretTap="/verwaltung">{{ store.tournament().name }}</p>
     <div class="controls">
-      <button type="button" class="chalk-btn" (click)="togglePause()" [attr.aria-pressed]="paused()">
-        @if (paused()) {
-          Weiter
-        } @else {
-          Pause
-        }
-      </button>
+      @if (slides().length > 1) {
+        <button type="button" class="chalk-btn" (click)="togglePause()" [attr.aria-pressed]="paused()">
+          @if (paused()) {
+            Weiter
+          } @else {
+            Pause
+          }
+        </button>
+      }
       <button type="button" class="chalk-btn" (click)="toggleFullscreen()">Vollbild</button>
     </div>
   </header>
@@ -143,19 +145,21 @@
     }
   </main>
 
-  <nav class="dots" aria-label="Folien">
-    @for (slide of slides(); track $index) {
-      <button
-        type="button"
-        class="dot"
-        [class.active]="$index === index()"
-        [attr.aria-current]="$index === index()"
-        (click)="goTo($index)"
-      >
-        <span class="visually-hidden">{{ slideLabel(slide) }}</span>
-      </button>
-    }
-  </nav>
+  @if (slides().length > 1) {
+    <nav class="dots" aria-label="Folien">
+      @for (slide of slides(); track $index) {
+        <button
+          type="button"
+          class="dot"
+          [class.active]="$index === index()"
+          [attr.aria-current]="$index === index()"
+          (click)="goTo($index)"
+        >
+          <span class="visually-hidden">{{ slideLabel(slide) }}</span>
+        </button>
+      }
+    </nav>
 
-  <p class="keys-hint" aria-hidden="true">←  → Folien · Leertaste Pause · F Vollbild</p>
+    <p class="keys-hint" aria-hidden="true">←  → Folien · Leertaste Pause · F Vollbild</p>
+  }
 </div>

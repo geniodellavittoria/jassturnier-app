@@ -37,6 +37,8 @@ interface KoSlide {
 type Slide = TitleSlide | GroupsOverviewSlide | KoSlide;
 
 const SLIDE_INTERVAL_MS = 12_000;
+/** Cross-device refresh — picks up scores entered on another device (e.g. admin's phone) into this display. */
+const SYNC_INTERVAL_MS = 5_000;
 
 /** Near-square grid biased toward a widescreen (~16:9) layout, minimizing empty cells. */
 function gridDims(count: number): { cols: number; rows: number } {
@@ -88,12 +90,18 @@ export class PresentPage {
     return 'none';
   });
 
-  /** Only the configured/current stage's results — not every stage in sequence. */
+  /**
+   * Only the configured/current stage's results — not every stage in
+   * sequence — and no separate title slide once there's something to show,
+   * so the standings/groups get the whole frame instead of sharing it with
+   * an intro screen. The title slide only appears as a fallback before any
+   * data exists (it carries the "noch keine Gruppen erfasst" empty state).
+   */
   protected readonly slides = computed<Slide[]>(() => {
     const t = this.store.tournament();
     const narrow = this.isNarrow();
     const stage = this.effectiveStage();
-    const slides: Slide[] = [{ kind: 'title' }];
+    const slides: Slide[] = [];
 
     if (stage === 'group') {
       const groupViews = this.store.groupViews();
@@ -129,6 +137,7 @@ export class PresentPage {
       slides.push({ kind: 'ko' });
     }
 
+    if (slides.length === 0) slides.push({ kind: 'title' });
     return slides;
   });
 
@@ -154,7 +163,14 @@ export class PresentPage {
     const timer = setInterval(() => {
       if (!this.paused() && this.slides().length > 1) this.next();
     }, SLIDE_INTERVAL_MS);
-    inject(DestroyRef).onDestroy(() => clearInterval(timer));
+    // This display's tournament data otherwise only updates when someone
+    // reloads it — poll so scores entered on another device (e.g. the
+    // admin's phone) show up here without a manual refresh.
+    const syncTimer = setInterval(() => void this.store.refreshFromServer(), SYNC_INTERVAL_MS);
+    inject(DestroyRef).onDestroy(() => {
+      clearInterval(timer);
+      clearInterval(syncTimer);
+    });
   }
 
   protected next(): void {

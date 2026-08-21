@@ -1,4 +1,4 @@
-import { computed, effect, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import {
   emptyKo,
   emptyTournament,
@@ -10,8 +10,10 @@ import {
 } from '../models/tournament';
 import { computeStandings, roundRobin, stageComplete } from './schedule';
 import { demoTournament2025 } from './demo-2025';
+import { RegistrationApi } from './registration-api';
 
 const STORAGE_KEY = 'jassturnier-state-v1';
+const SERVER_PUSH_DEBOUNCE_MS = 600;
 
 export interface GroupView {
   group: Group;
@@ -19,9 +21,21 @@ export interface GroupView {
   schedule: ReturnType<typeof roundRobin>;
 }
 
+/** Merge a parsed blob (localStorage or server) onto tournament defaults, tolerating older/missing fields. */
+function hydrateTournament(parsed: unknown): Tournament | null {
+  if (!parsed || typeof parsed !== 'object') return null;
+  const p = parsed as Partial<Tournament>;
+  if (!Array.isArray(p.groups) || !p.teams) return null;
+  return { ...emptyTournament(), ...p, ko: { ...emptyKo(), ...p.ko } };
+}
+
 @Injectable({ providedIn: 'root' })
 export class TournamentStore {
+  private readonly api = inject(RegistrationApi);
   private readonly state = signal<Tournament>(this.load());
+  /** Guards against pushing stale local/default data to the server before the initial fetch resolves. */
+  private hydratedFromServer = false;
+  private pushTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly tournament = this.state.asReadonly();
 
@@ -73,7 +87,35 @@ export class TournamentStore {
       } catch {
         // Storage may be unavailable (private mode, quota); the app keeps working in memory.
       }
+      // Skip pushing until the initial server fetch has resolved, so we don't
+      // clobber another device's data with a stale local/default snapshot.
+      if (this.hydratedFromServer) this.schedulePush(t);
     });
+    void this.hydrateFromServer();
+  }
+
+  /**
+   * Cross-device sync: tournament state otherwise lives only in this
+   * browser's localStorage, so a scoreboard on one device never sees points
+   * entered on another. The server (D1, via /api/tournament) is the shared
+   * copy — pulled on load and periodically by the presentation page
+   * (see PresentPage), pushed (debounced) on every local change.
+   */
+  private async hydrateFromServer(): Promise<void> {
+    const remote = hydrateTournament(await this.api.getTournament());
+    if (remote) this.state.set(remote);
+    this.hydratedFromServer = true;
+  }
+
+  /** Pull the latest server copy now — used by the presentation page to pick up changes made elsewhere. */
+  async refreshFromServer(): Promise<void> {
+    const remote = hydrateTournament(await this.api.getTournament());
+    if (remote) this.state.set(remote);
+  }
+
+  private schedulePush(t: Tournament): void {
+    if (this.pushTimer) clearTimeout(this.pushTimer);
+    this.pushTimer = setTimeout(() => void this.api.saveTournament(t), SERVER_PUSH_DEBOUNCE_MS);
   }
 
   team(id: string | null): Team | null {
@@ -309,10 +351,8 @@ export class TournamentStore {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as Tournament;
-        if (parsed && Array.isArray(parsed.groups) && parsed.teams) {
-          return { ...emptyTournament(), ...parsed, ko: { ...emptyKo(), ...parsed.ko } };
-        }
+        const hydrated = hydrateTournament(JSON.parse(raw));
+        if (hydrated) return hydrated;
       }
     } catch {
       // Corrupt or unavailable storage: start fresh.

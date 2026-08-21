@@ -32,6 +32,8 @@ interface SettingsBody {
   message?: string;
 }
 
+const MAX_TOURNAMENT_BODY_BYTES = 1_000_000; // 1MB — generous headroom over a real tournament's JSON size
+
 const STATUSES = new Set(['pending', 'contacted', 'paid']);
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -171,6 +173,37 @@ async function handleSaveSettings(request: Request, env: Env): Promise<Response>
   return json({ ok: true });
 }
 
+async function handleGetTournament(env: Env): Promise<Response> {
+  const row = await env.DB.prepare('SELECT data, updated_at FROM tournament WHERE id = 1').first();
+  if (!row) return json({ tournament: null, updatedAt: null });
+  let tournament: unknown;
+  try {
+    tournament = JSON.parse(row['data'] as string);
+  } catch {
+    return json({ tournament: null, updatedAt: null });
+  }
+  return json({ tournament, updatedAt: row['updated_at'] });
+}
+
+async function handleSaveTournament(request: Request, env: Env): Promise<Response> {
+  const raw = await request.text();
+  if (raw.length > MAX_TOURNAMENT_BODY_BYTES) return badRequest('Turnierdaten zu gross.');
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return badRequest('Ungültige Anfrage.');
+  }
+  await env.DB.prepare(
+    `INSERT INTO tournament (id, data, updated_at)
+     VALUES (1, ?, datetime('now'))
+     ON CONFLICT (id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
+  )
+    .bind(JSON.stringify(parsed))
+    .run();
+  return json({ ok: true });
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -207,6 +240,14 @@ export default {
       const unauthorized = await requireAdmin(request, env);
       if (unauthorized) return unauthorized;
       return handleSaveSettings(request, env);
+    }
+
+    if (path === '/api/tournament' && method === 'GET') return handleGetTournament(env);
+
+    if (path === '/api/admin/tournament' && method === 'PUT') {
+      const unauthorized = await requireAdmin(request, env);
+      if (unauthorized) return unauthorized;
+      return handleSaveTournament(request, env);
     }
 
     if (path.startsWith('/api/')) return json({ error: 'not found' }, { status: 404 });
