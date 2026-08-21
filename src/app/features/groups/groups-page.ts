@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { MAX_MATCH_POINTS_GROUP } from '../../models/tournament';
 import { TournamentStore } from '../../services/tournament-store';
 import { ScoreGrid, ScoreChange } from '../../shared/score-grid';
 import { StandingsTable } from '../../shared/standings-table';
@@ -15,6 +16,8 @@ import { SuitBadge } from '../../shared/suit-badge';
 })
 export class GroupsPage {
   protected readonly store = inject(TournamentStore);
+
+  protected readonly maxPoints = MAX_MATCH_POINTS_GROUP;
 
   protected readonly selectedIndex = signal(0);
 

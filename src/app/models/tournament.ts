@@ -1,5 +1,7 @@
-/** Fixed total pot of points available in a single Jass match — both teams' points must sum to this. */
-export const MAX_MATCH_POINTS = 1884;
+/** Fixed total pot of points in a single group-phase Jass match. */
+export const MAX_MATCH_POINTS_GROUP = 1884;
+/** Fixed total pot of points in a single Finalrunde or KO-phase Jass match. */
+export const MAX_MATCH_POINTS_FINAL = 1256;
 
 export interface Team {
   id: string;

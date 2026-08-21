@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { Team, ScoreMap } from '../models/tournament';
-import { normalizeRounds } from '../services/schedule';
+import { matchPointsMismatch, normalizeRounds, Pairing } from '../services/schedule';
 
 export interface ScoreChange {
   teamId: string;
@@ -37,6 +37,8 @@ export interface ScoreChange {
                   [value]="valueFor(team.id, r)"
                   (change)="onChange(team.id, r, $event)"
                   [attr.aria-label]="'Punkte ' + team.name + ', Runde ' + (r + 1)"
+                  [class.mismatch]="mismatch(team.id, r)"
+                  [attr.aria-invalid]="mismatch(team.id, r)"
                 />
               </td>
             }
@@ -90,12 +92,18 @@ export interface ScoreChange {
       outline: 2px solid var(--accent);
       outline-offset: 1px;
     }
+    input.mismatch {
+      border-color: var(--negative);
+      background: color-mix(in srgb, var(--negative) 12%, var(--surface));
+    }
   `,
 })
 export class ScoreGrid {
   readonly teams = input.required<Team[]>();
   readonly scores = input.required<ScoreMap>();
   readonly roundCount = input.required<number>();
+  readonly schedule = input.required<Pairing[][]>();
+  readonly maxPoints = input.required<number>();
   readonly caption = input('');
   readonly scoreChange = output<ScoreChange>();
 
@@ -106,6 +114,23 @@ export class ScoreGrid {
   protected valueFor(teamId: string, round: number): number | string {
     const value = normalizeRounds(this.scores()[teamId], this.roundCount())[round];
     return value ?? '';
+  }
+
+  private opponentFor(teamId: string, round: number): string | null {
+    const pairings = this.schedule()[round] ?? [];
+    const pairing = pairings.find((p) => p.homeId === teamId || p.awayId === teamId);
+    if (!pairing) return null;
+    return pairing.homeId === teamId ? pairing.awayId : pairing.homeId;
+  }
+
+  private scoreFor(teamId: string, round: number): number | null {
+    return this.scores()[teamId]?.[round] ?? null;
+  }
+
+  protected mismatch(teamId: string, round: number): boolean {
+    const opponentId = this.opponentFor(teamId, round);
+    if (!opponentId) return false;
+    return matchPointsMismatch(this.scoreFor(teamId, round), this.scoreFor(opponentId, round), this.maxPoints());
   }
 
   protected onChange(teamId: string, round: number, event: Event): void {

@@ -146,12 +146,14 @@ import { StandingsEntry } from '../models/tournament';
         /* Bound by both row count (height) and the narrowest numeric column's
            width — a group with few rows but many round columns would otherwise
            get a font sized for its height alone, overflowing the round/total
-           cells and bleeding the point values into neighboring columns. */
+           cells and clipping the point values (they can run to 4+ digits,
+           e.g. up to 1884). 0.28 keeps up to ~5-digit numbers inside their
+           column at the resulting font-size. */
         font-size: clamp(
           0.5rem,
           min(
             calc(100cqh / var(--table-row-count, 7) * 0.42),
-            calc(var(--table-num-col, 6) * 1cqw * 0.42)
+            calc(var(--table-num-col, 6) * 1cqw * 0.28)
           ),
           1.05rem
         );
@@ -188,7 +190,10 @@ import { StandingsEntry } from '../models/tournament';
        Keep in sync with the breakpoint in present-page.scss / present-page.ts. */
     @media (max-width: 48rem), (orientation: portrait) {
       :host.compact .standings {
-        font-size: clamp(0.75rem, 2.2cqw, 1rem);
+        /* Same column-width-aware formula as the desktop path (no cqh term
+           here, since the mobile container only has inline-size containment) —
+           a flat cqw value would ignore round count and clip just as easily. */
+        font-size: clamp(0.6rem, calc(var(--table-num-col, 6) * 1cqw * 0.28), 1rem);
       }
       :host.compact th,
       :host.compact td {

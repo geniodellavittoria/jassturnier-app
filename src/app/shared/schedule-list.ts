@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { MAX_MATCH_POINTS, ScoreMap, Team } from '../models/tournament';
+import { ScoreMap, Team } from '../models/tournament';
 import { matchPointsMismatch, Pairing } from '../services/schedule';
 
 /** The Spielplan of one group: who plays whom in every round. */
@@ -23,7 +23,7 @@ import { matchPointsMismatch, Pairing } from '../services/schedule';
                 </span>
                 @if (mismatch(pairing, roundIndex)) {
                   <span class="sum-warning">
-                    ⚠ {{ pairSum(pairing, roundIndex) }} statt {{ maxPoints }}
+                    ⚠ {{ pairSum(pairing, roundIndex) }} statt {{ maxPoints() }}
                   </span>
                 }
               </li>
@@ -92,8 +92,7 @@ export class ScheduleList {
   readonly schedule = input.required<Pairing[][]>();
   readonly teams = input.required<Record<string, Team>>();
   readonly scores = input.required<ScoreMap>();
-
-  protected readonly maxPoints = MAX_MATCH_POINTS;
+  readonly maxPoints = input.required<number>();
 
   protected teamName(id: string): string {
     return this.teams()[id]?.name ?? '?';
@@ -108,6 +107,10 @@ export class ScheduleList {
   }
 
   protected mismatch(pairing: Pairing, round: number): boolean {
-    return matchPointsMismatch(this.pointsFor(pairing.homeId, round), this.pointsFor(pairing.awayId, round));
+    return matchPointsMismatch(
+      this.pointsFor(pairing.homeId, round),
+      this.pointsFor(pairing.awayId, round),
+      this.maxPoints(),
+    );
   }
 }

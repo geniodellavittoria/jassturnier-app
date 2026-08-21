@@ -35,6 +35,8 @@
               [teams]="teamsOf(view.group.teamIds)"
               [scores]="store.tournament().finalScores"
               [roundCount]="store.tournament().finalRounds"
+              [schedule]="view.schedule"
+              [maxPoints]="maxPoints"
               [caption]="view.group.name"
               (scoreChange)="onScore($event)"
             />
@@ -60,6 +62,7 @@
             [schedule]="view.schedule"
             [teams]="store.tournament().teams"
             [scores]="store.tournament().finalScores"
+            [maxPoints]="maxPoints"
           />
         </details>
       </section>

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { KoId, KoMatch, MAX_MATCH_POINTS } from '../../models/tournament';
+import { KoId, KoMatch, MAX_MATCH_POINTS_FINAL } from '../../models/tournament';
 import { matchPointsMismatch } from '../../services/schedule';
 import { TournamentStore } from '../../services/tournament-store';
 
@@ -31,6 +31,8 @@ import { TournamentStore } from '../../services/tournament-store';
               max="9999"
               [value]="points(side) ?? ''"
               [disabled]="teamId(side) === null"
+              [class.mismatch]="pointsMismatch()"
+              [attr.aria-invalid]="pointsMismatch()"
               (change)="onPoints(side, $event)"
             />
           </div>
@@ -107,6 +109,10 @@ import { TournamentStore } from '../../services/tournament-store';
       outline: 2px solid var(--accent);
       outline-offset: 1px;
     }
+    input.mismatch {
+      border-color: var(--negative);
+      background: color-mix(in srgb, var(--negative) 12%, var(--surface));
+    }
     .draw-note {
       margin: 0.6rem 0 0;
       font-size: 0.82rem;
@@ -140,7 +146,7 @@ export class KoMatchCard {
     return m.pointsA !== null && m.pointsB !== null && m.pointsA === m.pointsB;
   });
 
-  protected readonly maxPoints = MAX_MATCH_POINTS;
+  protected readonly maxPoints = MAX_MATCH_POINTS_FINAL;
 
   protected readonly pointsSum = computed(() => {
     const m = this.match();
@@ -149,7 +155,7 @@ export class KoMatchCard {
 
   protected readonly pointsMismatch = computed(() => {
     const m = this.match();
-    return matchPointsMismatch(m.pointsA, m.pointsB);
+    return matchPointsMismatch(m.pointsA, m.pointsB, MAX_MATCH_POINTS_FINAL);
   });
 
   protected teamId(side: 'A' | 'B'): string | null {

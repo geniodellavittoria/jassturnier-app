@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { MAX_MATCH_POINTS_FINAL } from '../../models/tournament';
 import { TournamentStore } from '../../services/tournament-store';
 import { ScoreGrid, ScoreChange } from '../../shared/score-grid';
 import { StandingsTable } from '../../shared/standings-table';
@@ -17,6 +18,8 @@ import { KoMatchCard } from './ko-match-card';
 export class FinalsPage {
   protected readonly store = inject(TournamentStore);
 
+  protected readonly maxPoints = MAX_MATCH_POINTS_FINAL;
+
   protected readonly views = this.store.finalGroupViews;
 
   protected readonly hasKo = computed(() => {
@@ -30,7 +33,7 @@ export class FinalsPage {
   }
 
   protected mismatchCount(schedule: Pairing[][]): number {
-    return countMismatches(schedule, this.store.tournament().finalScores);
+    return countMismatches(schedule, this.store.tournament().finalScores, MAX_MATCH_POINTS_FINAL);
   }
 
   protected draw(): void {
