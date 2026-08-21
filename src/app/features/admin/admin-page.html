@@ -24,10 +24,33 @@
     </button>
   </form>
 } @else {
+  <section aria-labelledby="presentation-title" class="card">
+    <div class="section-head">
+      <h2 id="presentation-title">Präsentation</h2>
+      <button type="button" class="btn btn-quiet" (click)="logout()">Abmelden</button>
+    </div>
+    <div class="field">
+      <label for="presentation-stage">Angezeigte Phase auf der Präsentationsseite</label>
+      <select
+        id="presentation-stage"
+        [value]="store.tournament().presentationStage"
+        (change)="setPresentationStage($any($event.target).value)"
+      >
+        <option value="auto">Automatisch (aktueller Turnierstand)</option>
+        <option value="group">Gruppenphase</option>
+        <option value="final">Finalrunde</option>
+        <option value="ko">KO-Phase</option>
+      </select>
+    </div>
+    <p class="hint">
+      Die Präsentation zeigt jeweils nur eine Phase statt alle Ergebnisse nacheinander. Bei
+      «Automatisch» folgt sie dem tatsächlichen Turnierfortschritt.
+    </p>
+  </section>
+
   <section aria-labelledby="settings-title" class="card">
     <div class="section-head">
       <h2 id="settings-title">Zahlungsinformationen</h2>
-      <button type="button" class="btn btn-quiet" (click)="logout()">Abmelden</button>
     </div>
 
     <form [formGroup]="settingsForm" (ngSubmit)="saveSettings()">

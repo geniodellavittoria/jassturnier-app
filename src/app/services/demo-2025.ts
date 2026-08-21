@@ -90,6 +90,7 @@ export function demoTournament2025(): Tournament {
     finalGroups: [],
     finalScores: {},
     ko: emptyKo(),
+    presentationStage: 'auto',
   };
 
   for (const [groupName, seeds] of Object.entries(GROUPS_2025)) {

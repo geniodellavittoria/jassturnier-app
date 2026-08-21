@@ -92,7 +92,14 @@ export class TournamentStore {
 
   // ── Setup ────────────────────────────────────────────────────────────────
 
-  updateMeta(patch: Partial<Pick<Tournament, 'name' | 'year' | 'groupRounds' | 'finalRounds' | 'dropWorst' | 'qualifiersPerGroup'>>): void {
+  updateMeta(
+    patch: Partial<
+      Pick<
+        Tournament,
+        'name' | 'year' | 'groupRounds' | 'finalRounds' | 'dropWorst' | 'qualifiersPerGroup' | 'presentationStage'
+      >
+    >,
+  ): void {
     this.state.update((t) => ({ ...t, ...patch }));
   }
 

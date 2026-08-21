@@ -41,7 +41,8 @@
   }
 
   input,
-  textarea {
+  textarea,
+  select {
     padding: 0.6rem 0.6rem;
     font: inherit;
     color: var(--text);
@@ -56,9 +57,19 @@
     }
   }
 
+  select {
+    max-inline-size: 22rem;
+  }
+
   &.wide {
     grid-column: 1 / -1;
   }
+}
+
+.hint {
+  margin: 0.8rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-soft);
 }
 
 .saved-hint {

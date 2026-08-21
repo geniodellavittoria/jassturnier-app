@@ -27,6 +27,13 @@ export interface KoMatch {
   pointsB: number | null;
 }
 
+/**
+ * Which stage the presentation slideshow shows. 'auto' infers the current
+ * stage from tournament progress (latest stage with data); the others pin
+ * it regardless of progress.
+ */
+export type PresentationStage = 'auto' | 'group' | 'final' | 'ko';
+
 export interface Tournament {
   name: string;
   year: number;
@@ -44,6 +51,7 @@ export interface Tournament {
   finalGroups: Group[];
   finalScores: ScoreMap;
   ko: Record<KoId, KoMatch>;
+  presentationStage: PresentationStage;
 }
 
 export interface StandingsEntry {
@@ -78,5 +86,6 @@ export function emptyTournament(): Tournament {
     finalGroups: [],
     finalScores: {},
     ko: emptyKo(),
+    presentationStage: 'auto',
   };
 }

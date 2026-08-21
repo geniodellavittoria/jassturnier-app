@@ -74,41 +74,61 @@ export class PresentPage {
     { initialValue: window.innerWidth <= NARROW_BREAKPOINT_PX },
   );
 
+  /**
+   * Which stage's results to show. 'auto' follows tournament progress: KO
+   * once seeded, else Finalrunde once drawn, else the group phase.
+   */
+  protected readonly effectiveStage = computed<'group' | 'final' | 'ko' | 'none'>(() => {
+    const configured = this.store.tournament().presentationStage;
+    if (configured !== 'auto') return configured;
+    const t = this.store.tournament();
+    if (t.ko.hf1.teamA || t.ko.hf2.teamA) return 'ko';
+    if (this.store.finalGroupViews().length > 0) return 'final';
+    if (this.store.groupViews().length > 0) return 'group';
+    return 'none';
+  });
+
+  /** Only the configured/current stage's results — not every stage in sequence. */
   protected readonly slides = computed<Slide[]>(() => {
     const t = this.store.tournament();
     const narrow = this.isNarrow();
+    const stage = this.effectiveStage();
     const slides: Slide[] = [{ kind: 'title' }];
-    const groupViews = this.store.groupViews();
-    if (groupViews.length > 0) {
-      const { cols, rows } = narrow ? { cols: 1, rows: groupViews.length } : gridDims(groupViews.length);
-      slides.push({
-        kind: 'groups-overview',
-        stage: 'Gruppenphase',
-        views: groupViews,
-        highlightTop: t.qualifiersPerGroup,
-        cols,
-        rows,
-        tableRowCount: Math.max(...groupViews.map((v) => v.standings.length)) + 1,
-      });
-    }
-    const finalGroupViews = this.store.finalGroupViews();
-    if (finalGroupViews.length > 0) {
-      const { cols, rows } = narrow
-        ? { cols: 1, rows: finalGroupViews.length }
-        : gridDims(finalGroupViews.length);
-      slides.push({
-        kind: 'groups-overview',
-        stage: 'Finalrunde',
-        views: finalGroupViews,
-        highlightTop: 1,
-        cols,
-        rows,
-        tableRowCount: Math.max(...finalGroupViews.map((v) => v.standings.length)) + 1,
-      });
-    }
-    if (t.ko.hf1.teamA || t.ko.hf2.teamA) {
+
+    if (stage === 'group') {
+      const groupViews = this.store.groupViews();
+      if (groupViews.length > 0) {
+        const { cols, rows } = narrow ? { cols: 1, rows: groupViews.length } : gridDims(groupViews.length);
+        slides.push({
+          kind: 'groups-overview',
+          stage: 'Gruppenphase',
+          views: groupViews,
+          highlightTop: t.qualifiersPerGroup,
+          cols,
+          rows,
+          tableRowCount: Math.max(...groupViews.map((v) => v.standings.length)) + 1,
+        });
+      }
+    } else if (stage === 'final') {
+      const finalGroupViews = this.store.finalGroupViews();
+      if (finalGroupViews.length > 0) {
+        const { cols, rows } = narrow
+          ? { cols: 1, rows: finalGroupViews.length }
+          : gridDims(finalGroupViews.length);
+        slides.push({
+          kind: 'groups-overview',
+          stage: 'Finalrunde',
+          views: finalGroupViews,
+          highlightTop: 1,
+          cols,
+          rows,
+          tableRowCount: Math.max(...finalGroupViews.map((v) => v.standings.length)) + 1,
+        });
+      }
+    } else if (stage === 'ko') {
       slides.push({ kind: 'ko' });
     }
+
     return slides;
   });
 

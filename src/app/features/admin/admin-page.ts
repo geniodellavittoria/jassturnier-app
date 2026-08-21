@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PaymentSettings, Registration, RegistrationStatus } from '../../models/registration';
+import { PresentationStage } from '../../models/tournament';
 import { AdminAuth } from '../../services/admin-auth';
 import { RegistrationApi } from '../../services/registration-api';
 import { TournamentStore } from '../../services/tournament-store';
@@ -27,7 +28,7 @@ const EMPTY_SETTINGS: PaymentSettings = {
 export class AdminPage {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly api = inject(RegistrationApi);
-  private readonly store = inject(TournamentStore);
+  protected readonly store = inject(TournamentStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly auth = inject(AdminAuth);
@@ -112,6 +113,10 @@ export class AdminPage {
     const registrations = await this.api.listRegistrations();
     this.registrations.set(registrations ?? []);
     await this.loadSettings();
+  }
+
+  protected setPresentationStage(stage: PresentationStage): void {
+    this.store.updateMeta({ presentationStage: stage });
   }
 
   protected async logout(): Promise<void> {
