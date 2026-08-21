@@ -155,15 +155,17 @@ import { StandingsEntry } from '../models/tournament';
            width — a group with few rows but many round columns would otherwise
            get a font sized for its height alone, overflowing the round/total
            cells and clipping the point values (they can run to 4+ digits,
-           e.g. up to 1884). 0.28 keeps up to ~5-digit numbers inside their
-           column at the resulting font-size. */
+           e.g. up to 1884). 0.32 keeps up to ~5-digit numbers inside their
+           column at the resulting font-size. This is the size for both the
+           point values and the team names (team-name doesn't override it) —
+           kept larger/more prominent than the column headers below. */
         font-size: clamp(
-          0.5rem,
+          0.6rem,
           min(
-            calc(100cqh / var(--table-row-count, 7) * 0.42),
-            calc(var(--table-num-col, 6) * 1cqw * 0.28)
+            calc(100cqh / var(--table-row-count, 7) * 0.5),
+            calc(var(--table-num-col, 6) * 1cqw * 0.32)
           ),
-          1.05rem
+          1.25rem
         );
       }
       th,
@@ -172,7 +174,8 @@ import { StandingsEntry } from '../models/tournament';
           clamp(0.12rem, 1cqw, 0.5rem);
       }
       thead th {
-        font-size: clamp(0.42rem, calc(100cqh / var(--table-row-count, 7) * 0.26), 0.68rem);
+        /* Deliberately small/quiet relative to the point values and team names above. */
+        font-size: clamp(0.36rem, calc(100cqh / var(--table-row-count, 7) * 0.2), 0.55rem);
       }
       .team-name {
         display: block;
@@ -201,7 +204,10 @@ import { StandingsEntry } from '../models/tournament';
         /* Same column-width-aware formula as the desktop path (no cqh term
            here, since the mobile container only has inline-size containment) —
            a flat cqw value would ignore round count and clip just as easily. */
-        font-size: clamp(0.6rem, calc(var(--table-num-col, 6) * 1cqw * 0.28), 1rem);
+        font-size: clamp(0.7rem, calc(var(--table-num-col, 6) * 1cqw * 0.32), 1.15rem);
+      }
+      :host.compact thead th {
+        font-size: clamp(0.4rem, calc(var(--table-num-col, 6) * 1cqw * 0.2), 0.6rem);
       }
       :host.compact th,
       :host.compact td {
