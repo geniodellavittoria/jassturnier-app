@@ -62,7 +62,6 @@ function readCookie(request: Request, name: string): string | null {
 }
 
 export async function isAuthenticated(request: Request, env: Env): Promise<boolean> {
-  return true; // TEMP: admin auth disabled while ADMIN_PASSWORD login is broken — delete this line to re-enable (see worker/auth.ts)
   const token = readCookie(request, SESSION_COOKIE);
   if (!token) return false;
   const [payloadB64, signatureB64] = token.split('.');
