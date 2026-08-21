@@ -218,28 +218,6 @@
   }
 }
 
-.slide-head {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  --suit-size: clamp(2.2rem, 4vw, 3rem);
-  color: var(--gold);
-
-  h1 {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: clamp(1.8rem, 4.5vw, 3.2rem);
-    font-weight: 800;
-    color: var(--chalk);
-  }
-
-  &.center {
-    flex-direction: column;
-    gap: 0.3rem;
-    text-align: center;
-  }
-}
-
 // KO slide
 .ko-slide {
   display: grid;

@@ -39,11 +39,6 @@
         @if (current(); as slide) {
           @if (slide.kind === 'groups-overview') {
             <div class="groups-overview">
-              <header class="slide-head center">
-                <p class="eyebrow">{{ slide.stage }}</p>
-                <h1>{{ slide.stage === 'Gruppenphase' ? 'Gruppen' : 'Finalgruppen' }}</h1>
-              </header>
-
               <div
                 class="groups-grid"
                 [style.--group-cols]="slide.cols"
@@ -74,11 +69,6 @@
       }
       @case ('ko') {
         <div class="ko-slide">
-          <header class="slide-head center">
-            <p class="eyebrow">Finalrunde</p>
-            <h1>Halbfinal &amp; Final</h1>
-          </header>
-
           <div class="ko-columns">
             <section aria-label="Halbfinals">
               <h2>Halbfinal</h2>
