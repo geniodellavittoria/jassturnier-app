@@ -7,6 +7,8 @@ export interface Team {
   id: string;
   name: string;
   players: string[];
+  /** Set when the team was created from an Anmeldung (Verwaltung page). */
+  registrationId?: number;
 }
 
 export interface Group {

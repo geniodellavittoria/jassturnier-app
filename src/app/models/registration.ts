@@ -1,4 +1,4 @@
-export type RegistrationStatus = 'pending' | 'contacted' | 'paid';
+export type RegistrationStatus = 'pending' | 'contacted' | 'paid' | 'cancelled';
 
 export interface Registration {
   id: number;

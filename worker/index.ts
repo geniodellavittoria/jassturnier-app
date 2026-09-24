@@ -34,7 +34,7 @@ interface SettingsBody {
 
 const MAX_TOURNAMENT_BODY_BYTES = 1_000_000; // 1MB — generous headroom over a real tournament's JSON size
 
-const STATUSES = new Set(['pending', 'contacted', 'paid']);
+const STATUSES = new Set(['pending', 'contacted', 'paid', 'cancelled']);
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function json(data: unknown, init?: ResponseInit): Response {
@@ -117,6 +117,11 @@ async function handleUpdateStatus(request: Request, env: Env, id: string): Promi
   }
   if (!body.status || !STATUSES.has(body.status)) return badRequest('Ungültiger Status.');
   await env.DB.prepare('UPDATE registrations SET status = ? WHERE id = ?').bind(body.status, id).run();
+  return json({ ok: true });
+}
+
+async function handleDeleteRegistration(env: Env, id: string): Promise<Response> {
+  await env.DB.prepare('DELETE FROM registrations WHERE id = ?').bind(id).run();
   return json({ ok: true });
 }
 
@@ -228,6 +233,11 @@ export default {
       const unauthorized = await requireAdmin(request, env);
       if (unauthorized) return unauthorized;
       return handleUpdateStatus(request, env, statusMatch[1]);
+    }
+    if (statusMatch && method === 'DELETE') {
+      const unauthorized = await requireAdmin(request, env);
+      if (unauthorized) return unauthorized;
+      return handleDeleteRegistration(env, statusMatch[1]);
     }
 
     if (path === '/api/admin/settings' && method === 'GET') {

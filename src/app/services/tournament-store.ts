@@ -174,10 +174,10 @@ export class TournamentStore {
     });
   }
 
-  addTeam(groupId: string, name: string, players: string[]): void {
+  addTeam(groupId: string, name: string, players: string[], registrationId?: number): void {
     this.state.update((t) => {
       const id = `t-${crypto.randomUUID()}`;
-      const team: Team = { id, name, players: players.filter((p) => p.trim().length > 0) };
+      const team: Team = { id, name, players: players.filter((p) => p.trim().length > 0), registrationId };
       return {
         ...t,
         teams: { ...t.teams, [id]: team },

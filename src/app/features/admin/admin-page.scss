@@ -89,6 +89,19 @@
   color: var(--text-soft);
 }
 
+.reg-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: var(--text-soft);
+
+  strong {
+    color: var(--text);
+  }
+}
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -122,6 +135,40 @@
   .team-name {
     display: block;
     font-weight: 700;
+  }
+
+  .received {
+    display: block;
+    font-size: 0.82em;
+    color: var(--text-soft);
+  }
+
+  .badge-new {
+    margin-inline-start: 0.35rem;
+    padding: 0.05rem 0.4rem;
+    font-size: 0.85em;
+    font-weight: 700;
+    color: var(--surface);
+    background: var(--brand);
+    border-radius: 0.3rem;
+  }
+
+  .in-group {
+    color: var(--brand);
+    font-weight: 600;
+  }
+
+  .hint-link {
+    font-size: 0.9em;
+    color: var(--text-soft);
+  }
+
+  .is-cancelled {
+    opacity: 0.55;
+
+    .team-name {
+      text-decoration: line-through;
+    }
   }
 
   .note {

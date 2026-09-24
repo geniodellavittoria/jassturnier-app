@@ -47,6 +47,10 @@ export class RegistrationApi {
     return firstValueFrom(this.http.patch(`/api/admin/registrations/${id}`, { status })).then(() => undefined);
   }
 
+  deleteRegistration(id: number): Promise<void> {
+    return firstValueFrom(this.http.delete(`/api/admin/registrations/${id}`)).then(() => undefined);
+  }
+
   async getSettings(): Promise<PaymentSettings | null> {
     try {
       const res = await firstValueFrom(this.http.get<{ settings: PaymentSettings | null }>('/api/admin/settings'));

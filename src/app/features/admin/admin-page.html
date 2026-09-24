@@ -103,6 +103,20 @@
 
   <section aria-labelledby="regs-title" class="card">
     <h2 id="regs-title">Anmeldungen ({{ registrations().length }})</h2>
+    @if (registrations().length > 0) {
+      <p class="reg-stats">
+        @let st = stats();
+        <strong>{{ st.active }} aktiv</strong>
+        <span>+{{ st.last24h }} in 24 h</span>
+        <span>+{{ st.last7d }} in 7 Tagen</span>
+        <span>{{ st.pending }} ausstehend</span>
+        <span>{{ st.contacted }} kontaktiert</span>
+        <span>{{ st.paid }} bezahlt</span>
+        @if (st.cancelled > 0) {
+          <span>{{ st.cancelled }} abgemeldet</span>
+        }
+      </p>
+    }
 
     @if (registrations().length === 0) {
       <p class="empty">Noch keine Anmeldungen.</p>
@@ -115,14 +129,21 @@
               <th scope="col">Spieler</th>
               <th scope="col">Kontakt</th>
               <th scope="col">Status</th>
-              <th scope="col">E-Mail</th>
+              <th scope="col">Turnier</th>
+              <th scope="col">Aktionen</th>
             </tr>
           </thead>
           <tbody>
             @for (reg of registrations(); track reg.id) {
-              <tr>
+              <tr [class.is-cancelled]="reg.status === 'cancelled'">
                 <td>
                   <span class="team-name">{{ reg.teamName }}</span>
+                  <span class="received">
+                    {{ createdAt(reg) | date: 'dd.MM.yyyy HH:mm' }}
+                    @if (isNew(reg)) {
+                      <span class="badge-new">Neu</span>
+                    }
+                  </span>
                   @if (reg.note) {
                     <span class="note">{{ reg.note }}</span>
                   }
@@ -140,7 +161,25 @@
                     <option value="pending">Ausstehend</option>
                     <option value="contacted">Kontaktiert</option>
                     <option value="paid">Bezahlt</option>
+                    <option value="cancelled">Abgemeldet</option>
                   </select>
+                </td>
+                <td>
+                  @if (groupByRegistration().get(reg.id); as groupName) {
+                    <span class="in-group">In {{ groupName }}</span>
+                  } @else if (reg.status !== 'cancelled') {
+                    @if (store.tournament().groups.length > 0) {
+                      <label class="visually-hidden" [for]="'add-' + reg.id">{{ reg.teamName }} zu Gruppe hinzufügen</label>
+                      <select [id]="'add-' + reg.id" (change)="addToGroup(reg, $any($event.target).value)">
+                        <option value="" selected>Zu Gruppe…</option>
+                        @for (group of store.tournament().groups; track group.id) {
+                          <option [value]="group.id">{{ group.name }}</option>
+                        }
+                      </select>
+                    } @else {
+                      <a class="hint-link" routerLink="/einrichtung">Zuerst Gruppen anlegen</a>
+                    }
+                  }
                 </td>
                 <td class="email-actions">
                   <a class="btn btn-quiet" [href]="mailtoHref(reg)">Mail öffnen</a>
@@ -151,6 +190,7 @@
                       Text kopieren
                     }
                   </button>
+                  <button type="button" class="btn btn-quiet" (click)="deleteRegistration(reg)">Löschen</button>
                 </td>
               </tr>
             }
