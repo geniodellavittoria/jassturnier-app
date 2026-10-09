@@ -4,10 +4,23 @@
       <a routerLink="/gruppen" class="chalk-link">‹ Zurück zur Eingabe</a>
     }
     <p class="wordmark" aria-hidden="true" appSecretTap="/verwaltung">{{ store.tournament().name }}</p>
-    @if (current(); as slide) {
-      @if (slide.kind === 'groups-overview' && slide.placeholder) {
-        <p class="preview-note">Vorschau · noch keine Daten erfasst</p>
-      }
+    @if (isPlaceholder()) {
+      <p class="preview-note">Vorschau · noch keine Daten erfasst</p>
+    }
+    @if (slides().length > 1) {
+      <nav class="slide-switch" aria-label="Folien" title="←  → Folien · Leertaste Pause · F Vollbild">
+        @for (slide of slides(); track $index) {
+          <button
+            type="button"
+            class="chalk-btn"
+            [class.active]="$index === index()"
+            [attr.aria-current]="$index === index()"
+            (click)="goTo($index)"
+          >
+            {{ slideLabel(slide) }}
+          </button>
+        }
+      </nav>
     }
     <div class="controls">
       @if (slides().length > 1) {
@@ -64,14 +77,18 @@
                       <h2>{{ view.group.name }}</h2>
                     </header>
                     <div class="card-table">
-                      <app-standings-table
-                        [entries]="view.standings"
-                        [caption]="view.group.name"
-                        [highlightTop]="slide.highlightTop"
-                        [showPlayers]="false"
-                        [compact]="true"
-                        [topScore]="slide.topScore"
-                      />
+                      @if (slide.content === 'schedule') {
+                        <app-present-schedule [view]="view" />
+                      } @else {
+                        <app-standings-table
+                          [entries]="view.standings"
+                          [caption]="view.group.name"
+                          [highlightTop]="slide.highlightTop"
+                          [showPlayers]="false"
+                          [compact]="true"
+                          [topScore]="slide.topScore"
+                        />
+                      }
                     </div>
                   </section>
                 }
@@ -147,22 +164,4 @@
       }
     }
   </main>
-
-  @if (slides().length > 1) {
-    <nav class="dots" aria-label="Folien">
-      @for (slide of slides(); track $index) {
-        <button
-          type="button"
-          class="dot"
-          [class.active]="$index === index()"
-          [attr.aria-current]="$index === index()"
-          (click)="goTo($index)"
-        >
-          <span class="visually-hidden">{{ slideLabel(slide) }}</span>
-        </button>
-      }
-    </nav>
-
-    <p class="keys-hint" aria-hidden="true">←  → Folien · Leertaste Pause · F Vollbild</p>
-  }
 </div>

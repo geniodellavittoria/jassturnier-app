@@ -11,12 +11,13 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { fromEvent, map } from 'rxjs';
 import { AdminAuth } from '../../services/admin-auth';
-import { ScoreMap, Team } from '../../models/tournament';
+import { KoId, KoMatch, ScoreMap, Team } from '../../models/tournament';
 import { computeStandings, maxOf, normalizeRounds, roundRobin } from '../../services/schedule';
 import { GroupView, TournamentStore } from '../../services/tournament-store';
 import { SecretTap } from '../../shared/secret-tap';
 import { StandingsTable } from '../../shared/standings-table';
 import { SuitBadge } from '../../shared/suit-badge';
+import { PresentSchedule } from './present-schedule';
 
 // Keep in sync with the `@media (max-width: 48rem)` breakpoint in present-page.scss.
 const NARROW_BREAKPOINT_PX = 768;
@@ -27,6 +28,8 @@ interface TitleSlide {
 interface GroupsOverviewSlide {
   kind: 'groups-overview';
   stage: 'Gruppenphase' | 'Finalrunde';
+  /** Each stage rotates between its Rangliste and its Spielplan. */
+  content: 'standings' | 'schedule';
   views: GroupView[];
   highlightTop: number;
   cols: number;
@@ -39,14 +42,42 @@ interface GroupsOverviewSlide {
 }
 interface KoSlide {
   kind: 'ko';
+  /** Made-up bracket shown while no KO match has teams yet. */
+  placeholder?: boolean;
 }
 type Slide = TitleSlide | GroupsOverviewSlide | KoSlide;
 
 const SLIDE_INTERVAL_MS = 12_000;
 
-/** Layout preview shown while a tournament has no teams yet (2025 had 6 groups of 6 teams). */
-const PLACEHOLDER_GROUPS = 6;
-const PLACEHOLDER_TEAMS_PER_GROUP = 6;
+/** Shape of the layout preview shown while a stage has no teams yet (modelled on 2025). */
+interface PlaceholderShape {
+  teamsPerGroup: number;
+  /** Group count when not even empty groups exist yet. */
+  fallbackGroups: number;
+  minPoints: number;
+  pointSpan: number;
+  /** Leave the last round open in every other group, to preview partial tables. */
+  openLastRoundInOddGroups: boolean;
+  /** Offset into PLACEHOLDER_TEAM_NAMES, so stages don't all show the same teams. */
+  nameOffset: number;
+}
+const GROUP_PLACEHOLDER: PlaceholderShape = {
+  teamsPerGroup: 6,
+  fallbackGroups: 6,
+  minPoints: 620,
+  pointSpan: 640,
+  openLastRoundInOddGroups: true,
+  nameOffset: 0,
+};
+/** Finalists really come from the groups, but mapping them across stages isn't worth it for a preview. */
+const FINAL_PLACEHOLDER: PlaceholderShape = {
+  teamsPerGroup: 4,
+  fallbackGroups: 3,
+  minPoints: 480,
+  pointSpan: 300,
+  openLastRoundInOddGroups: false,
+  nameOffset: 2,
+};
 
 const PLACEHOLDER_TEAM_NAMES = [
   'Trumpf-Buur & Co.', 'Obenabe Express', 'Undenufe Ultras', 'Die Stöckjäger', 'Nell-Näll', 'Rosen-Kavaliere',
@@ -58,33 +89,37 @@ const PLACEHOLDER_TEAM_NAMES = [
 ];
 
 /**
- * Made-up, but plausible, standings — deterministic (seeded) so they don't
- * reshuffle on every sync. Odd groups have the last round still open, to
- * preview both full and partial tables (incl. Streichresultat/top score).
+ * Deterministic point generator (seeded LCG) so placeholders don't reshuffle
+ * on every sync. Uses the high bits — the LCG's low bits cycle quickly.
  */
+function seededPoints(seed: number, min: number, span: number): () => number {
+  return () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return min + ((seed >>> 16) % span);
+  };
+}
+
+/** Made-up, but plausible, standings (incl. Streichresultat/top score where the stage has them). */
 function placeholderGroupViews(
   groupNames: string[],
   fallbackPrefix: string,
   rounds: number,
   dropWorst: boolean,
+  shape: PlaceholderShape,
 ): GroupView[] {
   const names =
     groupNames.length > 0
       ? groupNames
-      : Array.from({ length: PLACEHOLDER_GROUPS }, (_, g) => `${fallbackPrefix} ${g + 1}`);
-  let seed = 2026;
-  const nextPoints = () => {
-    seed = (seed * 1103515245 + 12345) % 2147483648;
-    return 620 + ((seed >>> 16) % 640); // ~620–1260, like real group-phase rounds (high bits: the LCG's low bits cycle)
-  };
+      : Array.from({ length: shape.fallbackGroups }, (_, g) => `${fallbackPrefix} ${g + 1}`);
+  const nextPoints = seededPoints(2026, shape.minPoints, shape.pointSpan);
   const teams: Record<string, Team> = {};
   const scores: ScoreMap = {};
   return names.map((name, g) => {
-    const teamIds = Array.from({ length: PLACEHOLDER_TEAMS_PER_GROUP }, (_, i) => {
+    const teamIds = Array.from({ length: shape.teamsPerGroup }, (_, i) => {
       const id = `placeholder-${g}-${i}`;
-      const n = g * PLACEHOLDER_TEAMS_PER_GROUP + i;
+      const n = shape.nameOffset + g * shape.teamsPerGroup + i;
       teams[id] = { id, name: PLACEHOLDER_TEAM_NAMES[n % PLACEHOLDER_TEAM_NAMES.length], players: [] };
-      const played = g % 2 === 1 ? rounds - 1 : rounds;
+      const played = shape.openLastRoundInOddGroups && g % 2 === 1 ? rounds - 1 : rounds;
       scores[id] = Array.from({ length: rounds }, (_, r) => (r < played ? nextPoints() : null));
       return id;
     });
@@ -95,6 +130,36 @@ function placeholderGroupViews(
     };
   });
 }
+interface KoData {
+  ko: Record<KoId, KoMatch>;
+  teams: Record<string, Team>;
+}
+
+/** A fully played KO bracket (semis → kleiner Final/Final) so the winner highlights and podium show. */
+function placeholderKo(): KoData {
+  const teams: Record<string, Team> = {};
+  const [a, b, c, d] = ['Undenufe Ultras', 'Trumpf im Täschli', 'Ober sticht Under', 'Jassbrüeder'].map((name, i) => {
+    const id = `placeholder-ko-${i}`;
+    teams[id] = { id, name, players: [] };
+    return id;
+  });
+  const match = (teamA: string, teamB: string, pointsA: number, pointsB: number): KoMatch => ({
+    teamA,
+    teamB,
+    pointsA,
+    pointsB,
+  });
+  return {
+    ko: {
+      hf1: match(a, b, 712, 598),
+      hf2: match(c, d, 547, 663),
+      kleinerFinal: match(b, c, 634, 689),
+      final: match(a, d, 701, 655),
+    },
+    teams,
+  };
+}
+
 /** Cross-device refresh — picks up scores entered on another device (e.g. admin's phone) into this display. */
 const SYNC_INTERVAL_MS = 5_000;
 
@@ -112,7 +177,7 @@ function gridDims(count: number): { cols: number; rows: number } {
 @Component({
   selector: 'app-present-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, StandingsTable, SuitBadge, SecretTap],
+  imports: [RouterLink, StandingsTable, PresentSchedule, SuitBadge, SecretTap],
   templateUrl: './present-page.html',
   styleUrl: './present-page.scss',
   host: {
@@ -143,7 +208,8 @@ export class PresentPage {
     if (configured !== 'auto') return configured;
     const t = this.store.tournament();
     if (t.ko.hf1.teamA || t.ko.hf2.teamA) return 'ko';
-    if (this.store.finalGroupViews().length > 0) return 'final';
+    // Finalrunde groups may be set up (empty) long before the group phase is done — only switch once they have teams.
+    if (this.store.finalGroupViews().some((v) => v.standings.length > 0)) return 'final';
     if (this.store.groupViews().length > 0) return 'group';
     return 'none';
   });
@@ -159,7 +225,7 @@ export class PresentPage {
     const t = this.store.tournament();
     const narrow = this.isNarrow();
     const stage = this.effectiveStage();
-    if (stage === 'ko') return [{ kind: 'ko' }];
+    if (stage === 'ko') return [{ kind: 'ko', placeholder: this.koIsPlaceholder() }];
 
     const final = stage === 'final';
     const realViews = final ? this.store.finalGroupViews() : this.store.groupViews();
@@ -173,6 +239,7 @@ export class PresentPage {
           final ? 'Finalgruppe' : 'Gruppe',
           final ? t.finalRounds : t.groupRounds,
           final ? false : t.dropWorst,
+          final ? FINAL_PLACEHOLDER : GROUP_PLACEHOLDER,
         )
       : realViews;
     const topScore = final
@@ -181,18 +248,20 @@ export class PresentPage {
         ? maxOf(views.flatMap((v) => v.standings.flatMap((e) => e.rounds)))
         : this.topGroupScore();
     const { cols, rows } = narrow ? { cols: 1, rows: views.length } : gridDims(views.length);
+    const base = {
+      kind: 'groups-overview',
+      stage: final ? 'Finalrunde' : 'Gruppenphase',
+      views,
+      highlightTop: final ? 1 : t.qualifiersPerGroup,
+      cols,
+      rows,
+      tableRowCount: Math.max(...views.map((v) => v.standings.length)) + 1,
+      topScore,
+      placeholder,
+    } as const;
     return [
-      {
-        kind: 'groups-overview',
-        stage: final ? 'Finalrunde' : 'Gruppenphase',
-        views,
-        highlightTop: final ? 1 : t.qualifiersPerGroup,
-        cols,
-        rows,
-        tableRowCount: Math.max(...views.map((v) => v.standings.length)) + 1,
-        topScore,
-        placeholder,
-      },
+      { ...base, content: 'standings' },
+      { ...base, content: 'schedule' },
     ];
   });
 
@@ -208,16 +277,35 @@ export class PresentPage {
     return maxOf(allTeamIds.flatMap((id) => normalizeRounds(t.groupScores[id], t.groupRounds)));
   });
 
-  protected readonly ko = computed(() => this.store.tournament().ko);
+  protected readonly isPlaceholder = computed(() => {
+    const slide = this.current();
+    return slide.kind !== 'title' && !!slide.placeholder;
+  });
+
+  private readonly koIsPlaceholder = computed(() =>
+    Object.values(this.store.tournament().ko).every((m) => !m.teamA && !m.teamB),
+  );
+
+  /** The real bracket, or a made-up one while no KO match has teams yet. */
+  private readonly koData = computed<KoData>(() => {
+    const t = this.store.tournament();
+    return this.koIsPlaceholder() ? placeholderKo() : { ko: t.ko, teams: t.teams };
+  });
+
+  protected readonly ko = computed(() => this.koData().ko);
 
   protected readonly podium = computed(() => {
     const { final, kleinerFinal } = this.ko();
     return {
-      first: this.store.team(this.store.winnerOf(final)),
-      second: this.store.team(this.store.loserOf(final)),
-      third: this.store.team(this.store.winnerOf(kleinerFinal)),
+      first: this.koTeam(this.store.winnerOf(final)),
+      second: this.koTeam(this.store.loserOf(final)),
+      third: this.koTeam(this.store.winnerOf(kleinerFinal)),
     };
   });
+
+  private koTeam(id: string | null): Team | null {
+    return id ? (this.koData().teams[id] ?? null) : null;
+  }
 
   constructor() {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -298,13 +386,13 @@ export class PresentPage {
       case 'title':
         return 'Titel';
       case 'groups-overview':
-        return slide.stage;
+        return slide.content === 'schedule' ? 'Spielplan' : 'Rangliste';
       case 'ko':
         return 'KO-Phase';
     }
   }
 
   protected teamName(id: string | null): string {
-    return this.store.team(id)?.name ?? '…';
+    return this.koTeam(id)?.name ?? '…';
   }
 }

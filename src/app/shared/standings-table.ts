@@ -245,9 +245,9 @@ export class StandingsTable {
    * — long names ellipsize instead.
    */
   protected readonly colWidths = computed(() => {
-    const rank = 8;
+    const rank = 9;
     const total = 11;
-    const team = 33;
+    const team = 32;
     const roundCount = Math.max(1, this.roundIndexes().length);
     const round = (100 - rank - total - team) / roundCount;
     return { rank, team, round, total };
