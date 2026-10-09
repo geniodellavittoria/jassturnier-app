@@ -234,6 +234,11 @@ export class PresentPage {
     this.index.set(i);
   }
 
+  /** Mobile jump bar — a button rather than `href="#…"`, which would resolve against `<base href="/">`. */
+  protected jumpToGroup(groupId: string): void {
+    this.host.nativeElement.querySelector(`#group-${CSS.escape(groupId)}`)?.scrollIntoView({ block: 'start' });
+  }
+
   protected togglePause(): void {
     this.paused.update((p) => !p);
   }

@@ -180,6 +180,13 @@
   gap: clamp(0.25rem, 0.6vh, 0.5rem);
 }
 
+// Only shown in the mobile layout, where the groups stack and scroll.
+.group-jump {
+  display: none;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
 .groups-grid {
   flex: 1;
   min-block-size: 0;
@@ -385,6 +392,14 @@
 
   .slide.wide {
     block-size: auto;
+  }
+
+  .fullscreen-btn {
+    display: none;
+  }
+
+  .group-jump {
+    display: flex;
   }
 
   .title-slide h1 {

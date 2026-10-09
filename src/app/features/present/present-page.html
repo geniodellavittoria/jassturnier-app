@@ -19,7 +19,7 @@
           }
         </button>
       }
-      <button type="button" class="chalk-btn" (click)="toggleFullscreen()">Vollbild</button>
+      <button type="button" class="chalk-btn fullscreen-btn" (click)="toggleFullscreen()">Vollbild</button>
     </div>
   </header>
 
@@ -44,6 +44,13 @@
         @if (current(); as slide) {
           @if (slide.kind === 'groups-overview') {
             <div class="groups-overview">
+              <nav class="group-jump" aria-label="Zu Gruppe springen">
+                @for (view of slide.views; track view.group.id) {
+                  <button type="button" class="chalk-btn" (click)="jumpToGroup(view.group.id)">
+                    {{ view.group.name }}
+                  </button>
+                }
+              </nav>
               <div
                 class="groups-grid"
                 [style.--group-cols]="slide.cols"
@@ -51,7 +58,7 @@
                 [style.--table-row-count]="slide.tableRowCount"
               >
                 @for (view of slide.views; track view.group.id; let i = $index) {
-                  <section class="group-card">
+                  <section class="group-card" [id]="'group-' + view.group.id">
                     <header class="card-head">
                       <app-suit-badge [index]="i" />
                       <h2>{{ view.group.name }}</h2>
