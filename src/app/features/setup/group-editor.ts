@@ -82,6 +82,7 @@ import { SuitBadge } from '../../shared/suit-badge';
   styles: `
     .group-head {
       display: flex;
+      flex-wrap: wrap; /* "Gruppe entfernen" drops below the name on phones */
       align-items: center;
       gap: 0.7rem;
       margin-block-end: 0.9rem;

@@ -8,7 +8,7 @@ export interface Env {
 const SESSION_COOKIE = 'admin_session';
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
-function toBase64Url(bytes: ArrayBuffer): string {
+function toBase64Url(bytes: ArrayBuffer | Uint8Array): string {
   let binary = '';
   for (const byte of new Uint8Array(bytes)) binary += String.fromCharCode(byte);
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');

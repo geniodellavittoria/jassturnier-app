@@ -1,5 +1,7 @@
 :host {
   display: grid;
+  // minmax(0, …): no wide child may stretch the page past the viewport on phones.
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
 }
 
@@ -42,6 +44,12 @@
 
   &.wide {
     grid-column: span 2;
+
+    // Only one column fits on phones — span 2 would force a second, implicit
+    // column and push the page wider than the screen.
+    @media (max-width: 30rem) {
+      grid-column: 1 / -1;
+    }
   }
 
   &.check {
@@ -77,6 +85,7 @@
 
 .group-grid {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.1rem;
 }
 
