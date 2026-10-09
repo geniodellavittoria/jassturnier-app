@@ -176,6 +176,7 @@ import { StandingsEntry } from '../models/tournament';
       thead th {
         /* Deliberately small/quiet relative to the point values and team names above. */
         font-size: clamp(0.36rem, calc(100cqh / var(--table-row-count, 7) * 0.2), 0.9rem);
+        letter-spacing: 0.02em;
       }
       .team-name {
         display: block;
@@ -211,7 +212,8 @@ import { StandingsEntry } from '../models/tournament';
       }
       :host.compact th,
       :host.compact td {
-        padding: 0.3rem 0.4rem;
+        /* Slim inline padding: 4-digit points need the whole ~35px round column on a phone. */
+        padding: 0.3rem 0.15rem;
       }
     }
   `,
@@ -237,11 +239,15 @@ export class StandingsTable {
     return first ? first.rounds.map((_, i) => i) : [];
   });
 
-  /** Column widths (%) for compact mode — Team gets the lion's share so names stay readable. */
+  /**
+   * Column widths (%) for compact mode. Team gets the single widest column, but
+   * not so much that the round columns (which bound the font-size) get starved
+   * — long names ellipsize instead.
+   */
   protected readonly colWidths = computed(() => {
-    const rank = 6;
-    const total = 10;
-    const team = 52;
+    const rank = 8;
+    const total = 11;
+    const team = 33;
     const roundCount = Math.max(1, this.roundIndexes().length);
     const round = (100 - rank - total - team) / roundCount;
     return { rank, team, round, total };

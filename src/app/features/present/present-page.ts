@@ -11,7 +11,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { fromEvent, map } from 'rxjs';
 import { AdminAuth } from '../../services/admin-auth';
-import { maxOf, normalizeRounds, roundRobin } from '../../services/schedule';
+import { ScoreMap, Team } from '../../models/tournament';
+import { computeStandings, maxOf, normalizeRounds, roundRobin } from '../../services/schedule';
 import { GroupView, TournamentStore } from '../../services/tournament-store';
 import { SecretTap } from '../../shared/secret-tap';
 import { StandingsTable } from '../../shared/standings-table';
@@ -31,6 +32,8 @@ interface GroupsOverviewSlide {
   cols: number;
   rows: number;
   tableRowCount: number;
+  /** Highest single round score across the stage, highlighted in every group (group phase only). */
+  topScore: number | null;
   /** Made-up groups shown while the stage has no data yet. */
   placeholder?: boolean;
 }
@@ -45,25 +48,49 @@ const SLIDE_INTERVAL_MS = 12_000;
 const PLACEHOLDER_GROUPS = 6;
 const PLACEHOLDER_TEAMS_PER_GROUP = 6;
 
-/** Keeps the real group names when groups already exist, else invents `${fallbackPrefix} 1…n`. */
-function placeholderGroupViews(groupNames: string[], fallbackPrefix: string, rounds: number): GroupView[] {
+const PLACEHOLDER_TEAM_NAMES = [
+  'Trumpf-Buur & Co.', 'Obenabe Express', 'Undenufe Ultras', 'Die Stöckjäger', 'Nell-Näll', 'Rosen-Kavaliere',
+  'Schällen-Schreck', 'Eichle-Hörnli', 'Wyys-Wunder', 'Kreuz & Quer', 'Die Matschmacher', 'Bock-Stars',
+  'Schilten-Bürger', 'Trumpf im Täschli', 'Die Kartenhäusler', 'Gwätt-Wätt', 'Ass-Asse', 'Stich-Fest',
+  'Puur ohni Buur', 'Jass-Pfadi', 'Schieber-Bande', 'Die Sächsi-Sammler', 'Kontermatsch', 'Bierdeckel-Profis',
+  'Differenzler-Diven', 'Coiffeur-Salon', 'Die Weis-Heiten', 'Zwätschge-Trumpf', 'Ober sticht Under', 'Sibni im Ärmel',
+  'Chrüz-Fahrer', 'Die Nüni-Fänger', 'Stöck ab!', 'Kartegrüebler', 'Jassbrüeder', 'Letschte Stich',
+];
+
+/**
+ * Made-up, but plausible, standings — deterministic (seeded) so they don't
+ * reshuffle on every sync. Odd groups have the last round still open, to
+ * preview both full and partial tables (incl. Streichresultat/top score).
+ */
+function placeholderGroupViews(
+  groupNames: string[],
+  fallbackPrefix: string,
+  rounds: number,
+  dropWorst: boolean,
+): GroupView[] {
   const names =
     groupNames.length > 0
       ? groupNames
       : Array.from({ length: PLACEHOLDER_GROUPS }, (_, g) => `${fallbackPrefix} ${g + 1}`);
+  let seed = 2026;
+  const nextPoints = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return 620 + ((seed >>> 16) % 640); // ~620–1260, like real group-phase rounds (high bits: the LCG's low bits cycle)
+  };
+  const teams: Record<string, Team> = {};
+  const scores: ScoreMap = {};
   return names.map((name, g) => {
-    const teamIds = Array.from({ length: PLACEHOLDER_TEAMS_PER_GROUP }, (_, i) => `placeholder-${g}-${i}`);
+    const teamIds = Array.from({ length: PLACEHOLDER_TEAMS_PER_GROUP }, (_, i) => {
+      const id = `placeholder-${g}-${i}`;
+      const n = g * PLACEHOLDER_TEAMS_PER_GROUP + i;
+      teams[id] = { id, name: PLACEHOLDER_TEAM_NAMES[n % PLACEHOLDER_TEAM_NAMES.length], players: [] };
+      const played = g % 2 === 1 ? rounds - 1 : rounds;
+      scores[id] = Array.from({ length: rounds }, (_, r) => (r < played ? nextPoints() : null));
+      return id;
+    });
     return {
       group: { id: `placeholder-${g}`, name, teamIds },
-      standings: teamIds.map((id, i) => ({
-        team: { id, name: `Team ${g * PLACEHOLDER_TEAMS_PER_GROUP + i + 1}`, players: [] },
-        rounds: Array<number | null>(rounds).fill(null),
-        sum: 0,
-        total: 0,
-        droppedRound: null,
-        rank: i + 1,
-        playedRounds: 0,
-      })),
+      standings: computeStandings(teamIds, teams, scores, rounds, dropWorst),
       schedule: roundRobin(teamIds),
     };
   });
@@ -125,8 +152,8 @@ export class PresentPage {
    * Only the configured/current stage's results — not every stage in
    * sequence — and no separate title slide once there's something to show,
    * so the standings/groups get the whole frame instead of sharing it with
-   * an intro screen. Before any data exists, placeholder groups stand in so
-   * the layout can be previewed.
+   * an intro screen. Before any teams exist, placeholder groups with made-up
+   * teams and points stand in so the layout can be previewed.
    */
   protected readonly slides = computed<Slide[]>(() => {
     const t = this.store.tournament();
@@ -145,8 +172,14 @@ export class PresentPage {
           realViews.map((v) => v.group.name),
           final ? 'Finalgruppe' : 'Gruppe',
           final ? t.finalRounds : t.groupRounds,
+          final ? false : t.dropWorst,
         )
       : realViews;
+    const topScore = final
+      ? null
+      : placeholder
+        ? maxOf(views.flatMap((v) => v.standings.flatMap((e) => e.rounds)))
+        : this.topGroupScore();
     const { cols, rows } = narrow ? { cols: 1, rows: views.length } : gridDims(views.length);
     return [
       {
@@ -157,6 +190,7 @@ export class PresentPage {
         cols,
         rows,
         tableRowCount: Math.max(...views.map((v) => v.standings.length)) + 1,
+        topScore,
         placeholder,
       },
     ];
