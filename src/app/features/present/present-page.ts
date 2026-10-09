@@ -11,7 +11,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { fromEvent, map } from 'rxjs';
 import { AdminAuth } from '../../services/admin-auth';
-import { maxOf, normalizeRounds } from '../../services/schedule';
+import { maxOf, normalizeRounds, roundRobin } from '../../services/schedule';
 import { GroupView, TournamentStore } from '../../services/tournament-store';
 import { SecretTap } from '../../shared/secret-tap';
 import { StandingsTable } from '../../shared/standings-table';
@@ -31,6 +31,8 @@ interface GroupsOverviewSlide {
   cols: number;
   rows: number;
   tableRowCount: number;
+  /** Made-up groups shown while the stage has no data yet. */
+  placeholder?: boolean;
 }
 interface KoSlide {
   kind: 'ko';
@@ -38,6 +40,29 @@ interface KoSlide {
 type Slide = TitleSlide | GroupsOverviewSlide | KoSlide;
 
 const SLIDE_INTERVAL_MS = 12_000;
+
+/** Layout preview shown while a tournament has no groups yet (2025 had 6 groups of 6 teams). */
+const PLACEHOLDER_GROUPS = 6;
+const PLACEHOLDER_TEAMS_PER_GROUP = 6;
+
+function placeholderGroupViews(groupNamePrefix: string, rounds: number): GroupView[] {
+  return Array.from({ length: PLACEHOLDER_GROUPS }, (_, g) => {
+    const teamIds = Array.from({ length: PLACEHOLDER_TEAMS_PER_GROUP }, (_, i) => `placeholder-${g}-${i}`);
+    return {
+      group: { id: `placeholder-${g}`, name: `${groupNamePrefix} ${g + 1}`, teamIds },
+      standings: teamIds.map((id, i) => ({
+        team: { id, name: `Team ${g * PLACEHOLDER_TEAMS_PER_GROUP + i + 1}`, players: [] },
+        rounds: Array<number | null>(rounds).fill(null),
+        sum: 0,
+        total: 0,
+        droppedRound: null,
+        rank: i + 1,
+        playedRounds: 0,
+      })),
+      schedule: roundRobin(teamIds),
+    };
+  });
+}
 /** Cross-device refresh — picks up scores entered on another device (e.g. admin's phone) into this display. */
 const SYNC_INTERVAL_MS = 5_000;
 
@@ -95,8 +120,8 @@ export class PresentPage {
    * Only the configured/current stage's results — not every stage in
    * sequence — and no separate title slide once there's something to show,
    * so the standings/groups get the whole frame instead of sharing it with
-   * an intro screen. The title slide only appears as a fallback before any
-   * data exists (it carries the "noch keine Gruppen erfasst" empty state).
+   * an intro screen. Before any data exists, placeholder groups stand in so
+   * the layout can be previewed.
    */
   protected readonly slides = computed<Slide[]>(() => {
     const t = this.store.tournament();
@@ -138,7 +163,23 @@ export class PresentPage {
       slides.push({ kind: 'ko' });
     }
 
-    if (slides.length === 0) slides.push({ kind: 'title' });
+    // No data yet for the shown stage: render placeholder groups so the
+    // layout on the big screen can be checked before the tournament starts.
+    if (slides.length === 0) {
+      const final = stage === 'final';
+      const views = placeholderGroupViews(final ? 'Finalgruppe' : 'Gruppe', final ? t.finalRounds : t.groupRounds);
+      const { cols, rows } = narrow ? { cols: 1, rows: views.length } : gridDims(views.length);
+      slides.push({
+        kind: 'groups-overview',
+        stage: final ? 'Finalrunde' : 'Gruppenphase',
+        views,
+        highlightTop: final ? 1 : t.qualifiersPerGroup,
+        cols,
+        rows,
+        tableRowCount: PLACEHOLDER_TEAMS_PER_GROUP + 1,
+        placeholder: true,
+      });
+    }
     return slides;
   });
 

@@ -165,17 +165,17 @@ import { StandingsEntry } from '../models/tournament';
             calc(100cqh / var(--table-row-count, 7) * 0.5),
             calc(var(--table-num-col, 6) * 1cqw * 0.32)
           ),
-          1.25rem
+          2.5rem
         );
       }
       th,
       td {
-        padding: clamp(0rem, calc(100cqh / var(--table-row-count, 7) * 0.12), 0.35rem)
-          clamp(0.12rem, 1cqw, 0.5rem);
+        padding: clamp(0rem, calc(100cqh / var(--table-row-count, 7) * 0.12), 0.25rem)
+          clamp(0.1rem, 0.6cqw, 0.35rem);
       }
       thead th {
         /* Deliberately small/quiet relative to the point values and team names above. */
-        font-size: clamp(0.36rem, calc(100cqh / var(--table-row-count, 7) * 0.2), 0.55rem);
+        font-size: clamp(0.36rem, calc(100cqh / var(--table-row-count, 7) * 0.2), 0.9rem);
       }
       .team-name {
         display: block;

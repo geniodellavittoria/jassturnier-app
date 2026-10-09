@@ -4,6 +4,11 @@
       <a routerLink="/gruppen" class="chalk-link">‹ Zurück zur Eingabe</a>
     }
     <p class="wordmark" aria-hidden="true" appSecretTap="/verwaltung">{{ store.tournament().name }}</p>
+    @if (current(); as slide) {
+      @if (slide.kind === 'groups-overview' && slide.placeholder) {
+        <p class="preview-note">Vorschau · noch keine Daten erfasst</p>
+      }
+    }
     <div class="controls">
       @if (slides().length > 1) {
         <button type="button" class="chalk-btn" (click)="togglePause()" [attr.aria-pressed]="paused()">

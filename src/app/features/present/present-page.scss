@@ -26,9 +26,9 @@
   overflow: hidden;
   display: grid;
   grid-template-rows: auto 1fr auto auto;
-  gap: 0.5rem;
-  padding: clamp(1rem, 2.5vw, 2.5rem);
-  border: 10px solid #5c4632; // wooden frame of the slate
+  gap: 0.25rem;
+  padding: clamp(0.25rem, 0.6vw, 0.6rem);
+  border: 3px solid #5c4632; // wooden frame of the slate
   border-radius: 6px;
   box-shadow: inset 0 0 0 2px rgba(243, 239, 228, 0.12);
 }
@@ -46,22 +46,29 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  font-size: clamp(0.8rem, 1.4vw, 1rem);
+  font-size: clamp(0.7rem, 1.1vw, 0.85rem);
   color: var(--text-soft);
+}
+
+.preview-note {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  color: var(--gold);
 }
 
 .chalk-link,
 .chalk-btn {
   display: inline-flex;
   align-items: center;
-  min-block-size: 2.75rem;
+  min-block-size: 1.9rem;
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--chalk);
   background: transparent;
   border: 1px solid var(--table-rule-strong);
   border-radius: 999px;
-  padding: 0.55rem 0.85rem;
+  padding: 0.2rem 0.75rem;
   text-decoration: none;
   cursor: pointer;
 
@@ -86,13 +93,13 @@
   display: grid;
   align-content: center;
   justify-content: stretch;
-  max-inline-size: 70rem;
+  max-inline-size: 90rem;
   inline-size: 100%;
   min-block-size: 0;
   margin-inline: auto;
 
   &.wide {
-    max-inline-size: min(96vw, 110rem);
+    max-inline-size: none;
     block-size: 100%;
     align-content: stretch;
   }
@@ -170,7 +177,7 @@
   flex-direction: column;
   min-block-size: 0;
   block-size: 100%;
-  gap: clamp(0.5rem, 1.4vh, 1.2rem);
+  gap: clamp(0.25rem, 0.6vh, 0.5rem);
 }
 
 .groups-grid {
@@ -179,7 +186,7 @@
   display: grid;
   grid-template-columns: repeat(var(--group-cols, 1), 1fr);
   grid-template-rows: repeat(var(--group-rows, 1), 1fr);
-  gap: clamp(0.5rem, 1.4vh, 1.2rem) clamp(0.6rem, 1.4vw, 1.5rem);
+  gap: clamp(0.25rem, 0.6vh, 0.5rem) clamp(0.25rem, 0.6vw, 0.6rem);
 }
 
 .group-card {
@@ -189,9 +196,9 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding: clamp(0.4rem, 1.4cqh, 0.9rem) clamp(0.5rem, 1.4cqw, 1rem);
+  padding: clamp(0.15rem, 0.8cqh, 0.4rem) clamp(0.25rem, 0.8cqw, 0.5rem);
   border: 1px solid var(--table-rule);
-  border-radius: 0.6rem;
+  border-radius: 0.35rem;
 }
 
 .card-table {
@@ -204,7 +211,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-block-end: clamp(0.15rem, 1.2cqh, 0.5rem);
+  margin-block-end: clamp(0rem, 0.6cqh, 0.25rem);
   flex: none;
   --suit-size: clamp(0.9rem, 6cqh, 1.6rem);
   color: var(--gold);
@@ -222,13 +229,13 @@
 // KO slide
 .ko-slide {
   display: grid;
-  gap: clamp(1rem, 2.5vh, 2rem);
+  gap: clamp(0.5rem, 1.2vh, 1rem);
 }
 
 .ko-columns {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr));
-  gap: clamp(1rem, 3vw, 3rem);
+  gap: clamp(0.5rem, 1.5vw, 1.5rem);
 
   h2 {
     margin: 0 0 0.6rem;
