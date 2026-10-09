@@ -3,13 +3,14 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs';
 import { AdminAuth } from './services/admin-auth';
+import { ConflictDialog } from './shared/conflict-dialog';
 import { SecretTap } from './shared/secret-tap';
 import { TournamentStore } from './services/tournament-store';
 
 @Component({
   selector: 'app-root',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, SecretTap],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, SecretTap, ConflictDialog],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

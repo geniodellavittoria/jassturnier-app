@@ -160,9 +160,6 @@ function placeholderKo(): KoData {
   };
 }
 
-/** Cross-device refresh — picks up scores entered on another device (e.g. admin's phone) into this display. */
-const SYNC_INTERVAL_MS = 5_000;
-
 /** Near-square grid biased toward a widescreen (~16:9) layout, minimizing empty cells. */
 function gridDims(count: number): { cols: number; rows: number } {
   let cols = Math.max(1, Math.ceil(Math.sqrt(count * 1.6)));
@@ -313,14 +310,8 @@ export class PresentPage {
     const timer = setInterval(() => {
       if (!this.paused() && this.slides().length > 1) this.next();
     }, SLIDE_INTERVAL_MS);
-    // This display's tournament data otherwise only updates when someone
-    // reloads it — poll so scores entered on another device (e.g. the
-    // admin's phone) show up here without a manual refresh.
-    const syncTimer = setInterval(() => void this.store.refreshFromServer(), SYNC_INTERVAL_MS);
-    inject(DestroyRef).onDestroy(() => {
-      clearInterval(timer);
-      clearInterval(syncTimer);
-    });
+    // Scores entered on other devices arrive via TournamentStore's own polling.
+    inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }
 
   protected next(): void {

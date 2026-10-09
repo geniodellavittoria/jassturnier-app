@@ -2,7 +2,16 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { PaymentSettings, Registration, RegistrationInput, RegistrationStatus } from '../models/registration';
-import { Tournament } from '../models/tournament';
+import { PatchConflict, PatchOp } from './patch';
+
+export interface RemoteTournament {
+  tournament: unknown;
+  version: number;
+}
+
+export interface PatchResult extends RemoteTournament {
+  conflicts: PatchConflict[];
+}
 
 @Injectable({ providedIn: 'root' })
 export class RegistrationApi {
@@ -64,17 +73,21 @@ export class RegistrationApi {
     return firstValueFrom(this.http.put('/api/admin/settings', settings)).then(() => undefined);
   }
 
-  /** Server-side copy of the tournament, shared across devices. `unknown` — caller validates before trusting it. */
-  async getTournament(): Promise<unknown> {
+  /**
+   * Server-side copy of the tournament, shared across devices, plus its
+   * version (bumped on every write). `tournament` is `unknown` — the caller
+   * validates before trusting it. Null when the server is unreachable.
+   */
+  async getTournament(): Promise<RemoteTournament | null> {
     try {
-      const res = await firstValueFrom(this.http.get<{ tournament: unknown }>('/api/tournament'));
-      return res.tournament;
+      return await firstValueFrom(this.http.get<RemoteTournament>('/api/tournament'));
     } catch {
       return null;
     }
   }
 
-  saveTournament(tournament: Tournament): Promise<void> {
-    return firstValueFrom(this.http.put('/api/admin/tournament', tournament)).then(() => undefined);
+  /** Send only this device's changes; ops another device changed meanwhile come back as conflicts. */
+  patchTournament(ops: PatchOp[]): Promise<PatchResult> {
+    return firstValueFrom(this.http.patch<PatchResult>('/api/admin/tournament', { ops }));
   }
 }

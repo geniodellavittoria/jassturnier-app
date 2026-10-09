@@ -28,3 +28,7 @@
 <main id="main" [class.presenting]="presenting()">
   <router-outlet />
 </main>
+
+@if (auth.authenticated()) {
+  <app-conflict-dialog />
+}

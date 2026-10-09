@@ -10,10 +10,20 @@ import {
 } from '../models/tournament';
 import { computeStandings, roundRobin, stageComplete } from './schedule';
 import { demoTournament2025 } from './demo-2025';
+import { applyOp, applyOps, diff, Path, PatchConflict } from './patch';
 import { RegistrationApi } from './registration-api';
 
 const STORAGE_KEY = 'jassturnier-state-v1';
 const SERVER_PUSH_DEBOUNCE_MS = 600;
+/** How often every open device pulls changes made on other devices. */
+const SYNC_INTERVAL_MS = 5_000;
+
+const KO_LABELS: Record<KoId, string> = {
+  hf1: 'Halbfinal 1',
+  hf2: 'Halbfinal 2',
+  kleinerFinal: 'Kleiner Final',
+  final: 'Final',
+};
 
 export interface GroupView {
   group: Group;
@@ -33,9 +43,13 @@ function hydrateTournament(parsed: unknown): Tournament | null {
 export class TournamentStore {
   private readonly api = inject(RegistrationApi);
   private readonly state = signal<Tournament>(this.load());
-  /** Guards against pushing stale local/default data to the server before the initial fetch resolves. */
-  private hydratedFromServer = false;
-  private pushTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Last state the server confirmed; undefined until the first successful pull, null if the server has none yet. */
+  private serverBase: Tournament | null | undefined = undefined;
+  private serverVersion = 0;
+  /** A pull or flush is in flight — they must not interleave, both rebase `state` onto the server copy. */
+  private syncing = false;
+  private flushTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly conflictList = signal<PatchConflict[]>([]);
 
   readonly tournament = this.state.asReadonly();
 
@@ -81,41 +95,116 @@ export class TournamentStore {
 
   constructor() {
     effect(() => {
-      const t = this.state();
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(t));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state()));
       } catch {
         // Storage may be unavailable (private mode, quota); the app keeps working in memory.
       }
-      // Skip pushing until the initial server fetch has resolved, so we don't
-      // clobber another device's data with a stale local/default snapshot.
-      if (this.hydratedFromServer) this.schedulePush(t);
     });
-    void this.hydrateFromServer();
+    void this.pull();
+    setInterval(() => {
+      if (document.visibilityState === 'visible') void this.pull();
+    }, SYNC_INTERVAL_MS);
   }
 
-  /**
-   * Cross-device sync: tournament state otherwise lives only in this
-   * browser's localStorage, so a scoreboard on one device never sees points
-   * entered on another. The server (D1, via /api/tournament) is the shared
-   * copy — pulled on load and periodically by the presentation page
-   * (see PresentPage), pushed (debounced) on every local change.
-   */
-  private async hydrateFromServer(): Promise<void> {
-    const remote = hydrateTournament(await this.api.getTournament());
-    if (remote) this.state.set(remote);
-    this.hydratedFromServer = true;
+  // ── Cross-device sync ────────────────────────────────────────────────────
+  //
+  // The server (D1, via /api/tournament) holds the shared copy; several
+  // admins enter results at once from different devices. `serverBase` is the
+  // last state the server confirmed; `state` is that plus this device's
+  // unsent edits. Only the difference (diff(serverBase, state)) is sent, each
+  // op carrying the value it was based on — the server applies it only if
+  // nobody changed that value meanwhile, else returns it as a conflict for
+  // the admin to decide (see ConflictDialog). Never sending the whole state
+  // means a stale device can't wipe other admins' entries.
+
+  /** Pull the server copy (on load and every few seconds) and keep unsent local edits on top. */
+  private async pull(): Promise<void> {
+    if (this.syncing) return;
+    this.syncing = true;
+    try {
+      const remote = await this.api.getTournament();
+      if (!remote) return; // offline — retry on the next tick
+      if (this.serverBase === undefined) {
+        // First contact: the server copy wins over whatever localStorage had.
+        this.serverBase = hydrateTournament(remote.tournament);
+        this.serverVersion = remote.version;
+        if (this.serverBase) this.state.set(this.serverBase);
+      } else if (remote.version > this.serverVersion) {
+        const pending = diff(this.serverBase, this.state());
+        this.serverBase = hydrateTournament(remote.tournament);
+        this.serverVersion = remote.version;
+        if (this.serverBase) this.state.set(applyOps(this.serverBase, pending));
+      }
+    } finally {
+      this.syncing = false;
+    }
+    if (diff(this.serverBase, this.state()).length > 0) this.scheduleFlush();
   }
 
-  /** Pull the latest server copy now — used by the presentation page to pick up changes made elsewhere. */
-  async refreshFromServer(): Promise<void> {
-    const remote = hydrateTournament(await this.api.getTournament());
-    if (remote) this.state.set(remote);
+  /** Every store mutation goes through here so the change gets sent to the server. */
+  private mutate(fn: (t: Tournament) => Tournament): void {
+    this.state.update(fn);
+    this.scheduleFlush();
   }
 
-  private schedulePush(t: Tournament): void {
-    if (this.pushTimer) clearTimeout(this.pushTimer);
-    this.pushTimer = setTimeout(() => void this.api.saveTournament(t), SERVER_PUSH_DEBOUNCE_MS);
+  private scheduleFlush(): void {
+    if (this.flushTimer) clearTimeout(this.flushTimer);
+    this.flushTimer = setTimeout(() => void this.flush(), SERVER_PUSH_DEBOUNCE_MS);
+  }
+
+  private async flush(): Promise<void> {
+    // Not before the first successful pull — otherwise a stale localStorage
+    // snapshot would be diffed against nothing and sent as a full overwrite.
+    if (this.serverBase === undefined || this.syncing) return;
+    const sent = this.state();
+    const ops = diff(this.serverBase, sent);
+    if (ops.length === 0) return;
+    this.syncing = true;
+    try {
+      const res = await this.api.patchTournament(ops);
+      this.serverBase = hydrateTournament(res.tournament);
+      this.serverVersion = res.version;
+      // Edits made while the request was in flight stay on top.
+      if (this.serverBase) this.state.set(applyOps(this.serverBase, diff(sent, this.state())));
+      if (res.conflicts.length > 0) this.conflictList.update((list) => [...list, ...res.conflicts]);
+    } catch {
+      // Offline or not logged in: the edits stay pending and are retried on the next pull.
+    } finally {
+      this.syncing = false;
+    }
+  }
+
+  /** Values another device changed while this one edited them — waiting for the admin's decision. */
+  readonly conflicts = this.conflictList.asReadonly();
+
+  /** Keep this device's value (overwrites the other device's) or accept the server's. */
+  resolveConflict(conflict: PatchConflict, keepMine: boolean): void {
+    this.conflictList.update((list) => list.filter((c) => c !== conflict));
+    if (!keepMine) return; // state already holds the server's value
+    const op =
+      conflict.mine === undefined
+        ? { path: conflict.path, prev: conflict.theirs, del: true as const }
+        : { path: conflict.path, prev: conflict.theirs, value: conflict.mine };
+    this.mutate((t) => applyOp(t, op) as Tournament);
+  }
+
+  /** Human-readable location of a conflicting value, e.g. "Gruppenphase · Gruppe A · Bock-Stars · Runde 3". */
+  describeConflict(path: Path): string {
+    const t = this.state();
+    const [root, a, b] = path;
+    if ((root === 'groupScores' || root === 'finalScores') && typeof a === 'string' && typeof b === 'number') {
+      const groups = root === 'groupScores' ? t.groups : t.finalGroups;
+      const group = groups.find((g) => g.teamIds.includes(a));
+      const stage = root === 'groupScores' ? 'Gruppenphase' : 'Finalrunde';
+      return [stage, group?.name, t.teams[a]?.name ?? 'Team', `Runde ${b + 1}`].filter(Boolean).join(' · ');
+    }
+    if (root === 'ko' && typeof a === 'string' && (b === 'pointsA' || b === 'pointsB')) {
+      const match = t.ko[a as KoId];
+      const teamId = b === 'pointsA' ? match?.teamA : match?.teamB;
+      return ['KO', KO_LABELS[a as KoId] ?? a, this.team(teamId ?? null)?.name].filter(Boolean).join(' · ');
+    }
+    return 'Turnierdaten (Einrichtung)';
   }
 
   team(id: string | null): Team | null {
@@ -142,11 +231,11 @@ export class TournamentStore {
       >
     >,
   ): void {
-    this.state.update((t) => ({ ...t, ...patch }));
+    this.mutate((t) => ({ ...t, ...patch }));
   }
 
   addGroup(): void {
-    this.state.update((t) => {
+    this.mutate((t) => {
       const letter = String.fromCharCode(65 + t.groups.length);
       const group: Group = { id: `g-${crypto.randomUUID()}`, name: `Gruppe ${letter}`, teamIds: [] };
       return { ...t, groups: [...t.groups, group] };
@@ -154,14 +243,14 @@ export class TournamentStore {
   }
 
   renameGroup(groupId: string, name: string): void {
-    this.state.update((t) => ({
+    this.mutate((t) => ({
       ...t,
       groups: t.groups.map((g) => (g.id === groupId ? { ...g, name } : g)),
     }));
   }
 
   removeGroup(groupId: string): void {
-    this.state.update((t) => {
+    this.mutate((t) => {
       const group = t.groups.find((g) => g.id === groupId);
       if (!group) return t;
       const teams = { ...t.teams };
@@ -175,7 +264,7 @@ export class TournamentStore {
   }
 
   addTeam(groupId: string, name: string, players: string[], registrationId?: number): void {
-    this.state.update((t) => {
+    this.mutate((t) => {
       const id = `t-${crypto.randomUUID()}`;
       const team: Team = { id, name, players: players.filter((p) => p.trim().length > 0), registrationId };
       return {
@@ -188,7 +277,7 @@ export class TournamentStore {
   }
 
   updateTeam(teamId: string, patch: Partial<Pick<Team, 'name' | 'players'>>): void {
-    this.state.update((t) => {
+    this.mutate((t) => {
       const team = t.teams[teamId];
       if (!team) return t;
       return { ...t, teams: { ...t.teams, [teamId]: { ...team, ...patch } } };
@@ -196,7 +285,7 @@ export class TournamentStore {
   }
 
   removeTeam(teamId: string): void {
-    this.state.update((t) => {
+    this.mutate((t) => {
       const teams = { ...t.teams };
       const groupScores = { ...t.groupScores };
       delete teams[teamId];
@@ -211,16 +300,16 @@ export class TournamentStore {
   }
 
   loadDemo(): void {
-    this.state.set(demoTournament2025());
+    this.mutate(() => demoTournament2025());
   }
 
   resetAll(): void {
-    this.state.set(emptyTournament());
+    this.mutate(() => emptyTournament());
   }
 
   /** Keep groups and teams, clear every score and the whole Finalrunde. */
   resetScores(): void {
-    this.state.update((t) => {
+    this.mutate((t) => {
       const groupScores = Object.fromEntries(
         Object.keys(t.teams).map((id) => [id, Array(t.groupRounds).fill(null)]),
       );
@@ -231,7 +320,7 @@ export class TournamentStore {
   // ── Scores ───────────────────────────────────────────────────────────────
 
   setGroupScore(teamId: string, round: number, value: number | null): void {
-    this.state.update((t) => {
+    this.mutate((t) => {
       const rounds = [...(t.groupScores[teamId] ?? Array(t.groupRounds).fill(null))];
       while (rounds.length < t.groupRounds) rounds.push(null);
       rounds[round] = value;
@@ -240,7 +329,7 @@ export class TournamentStore {
   }
 
   setFinalScore(teamId: string, round: number, value: number | null): void {
-    this.state.update((t) => {
+    this.mutate((t) => {
       const rounds = [...(t.finalScores[teamId] ?? Array(t.finalRounds).fill(null))];
       while (rounds.length < t.finalRounds) rounds.push(null);
       rounds[round] = value;
@@ -257,7 +346,7 @@ export class TournamentStore {
    */
   drawFinalGroups(): void {
     const views = this.groupViews();
-    this.state.update((t) => {
+    this.mutate((t) => {
       const pools: string[][] = [];
       for (let place = 0; place < t.qualifiersPerGroup; place++) {
         pools.push(
@@ -311,7 +400,7 @@ export class TournamentStore {
     const [s1, s2, s3, s4] = four;
     if (!s1 || !s2 || !s3 || !s4) return;
 
-    this.state.update((t) => ({
+    this.mutate((t) => ({
       ...t,
       ko: {
         hf1: { teamA: s1.team.id, teamB: s4.team.id, pointsA: null, pointsB: null },
@@ -323,7 +412,7 @@ export class TournamentStore {
   }
 
   setKoPoints(id: KoId, side: 'A' | 'B', value: number | null): void {
-    this.state.update((t) => {
+    this.mutate((t) => {
       const ko = { ...t.ko, [id]: { ...t.ko[id], [side === 'A' ? 'pointsA' : 'pointsB']: value } };
       // Winners of the Halbfinals meet in the Final, losers in the Kleiner Final.
       if (id === 'hf1' || id === 'hf2') {
@@ -339,7 +428,7 @@ export class TournamentStore {
   }
 
   setKoTeam(id: KoId, side: 'A' | 'B', teamId: string | null): void {
-    this.state.update((t) => ({
+    this.mutate((t) => ({
       ...t,
       ko: { ...t.ko, [id]: { ...t.ko[id], [side === 'A' ? 'teamA' : 'teamB']: teamId } },
     }));
