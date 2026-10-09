@@ -41,15 +41,20 @@ type Slide = TitleSlide | GroupsOverviewSlide | KoSlide;
 
 const SLIDE_INTERVAL_MS = 12_000;
 
-/** Layout preview shown while a tournament has no groups yet (2025 had 6 groups of 6 teams). */
+/** Layout preview shown while a tournament has no teams yet (2025 had 6 groups of 6 teams). */
 const PLACEHOLDER_GROUPS = 6;
 const PLACEHOLDER_TEAMS_PER_GROUP = 6;
 
-function placeholderGroupViews(groupNamePrefix: string, rounds: number): GroupView[] {
-  return Array.from({ length: PLACEHOLDER_GROUPS }, (_, g) => {
+/** Keeps the real group names when groups already exist, else invents `${fallbackPrefix} 1…n`. */
+function placeholderGroupViews(groupNames: string[], fallbackPrefix: string, rounds: number): GroupView[] {
+  const names =
+    groupNames.length > 0
+      ? groupNames
+      : Array.from({ length: PLACEHOLDER_GROUPS }, (_, g) => `${fallbackPrefix} ${g + 1}`);
+  return names.map((name, g) => {
     const teamIds = Array.from({ length: PLACEHOLDER_TEAMS_PER_GROUP }, (_, i) => `placeholder-${g}-${i}`);
     return {
-      group: { id: `placeholder-${g}`, name: `${groupNamePrefix} ${g + 1}`, teamIds },
+      group: { id: `placeholder-${g}`, name, teamIds },
       standings: teamIds.map((id, i) => ({
         team: { id, name: `Team ${g * PLACEHOLDER_TEAMS_PER_GROUP + i + 1}`, players: [] },
         rounds: Array<number | null>(rounds).fill(null),
@@ -127,60 +132,34 @@ export class PresentPage {
     const t = this.store.tournament();
     const narrow = this.isNarrow();
     const stage = this.effectiveStage();
-    const slides: Slide[] = [];
+    if (stage === 'ko') return [{ kind: 'ko' }];
 
-    if (stage === 'group') {
-      const groupViews = this.store.groupViews();
-      if (groupViews.length > 0) {
-        const { cols, rows } = narrow ? { cols: 1, rows: groupViews.length } : gridDims(groupViews.length);
-        slides.push({
-          kind: 'groups-overview',
-          stage: 'Gruppenphase',
-          views: groupViews,
-          highlightTop: t.qualifiersPerGroup,
-          cols,
-          rows,
-          tableRowCount: Math.max(...groupViews.map((v) => v.standings.length)) + 1,
-        });
-      }
-    } else if (stage === 'final') {
-      const finalGroupViews = this.store.finalGroupViews();
-      if (finalGroupViews.length > 0) {
-        const { cols, rows } = narrow
-          ? { cols: 1, rows: finalGroupViews.length }
-          : gridDims(finalGroupViews.length);
-        slides.push({
-          kind: 'groups-overview',
-          stage: 'Finalrunde',
-          views: finalGroupViews,
-          highlightTop: 1,
-          cols,
-          rows,
-          tableRowCount: Math.max(...finalGroupViews.map((v) => v.standings.length)) + 1,
-        });
-      }
-    } else if (stage === 'ko') {
-      slides.push({ kind: 'ko' });
-    }
-
-    // No data yet for the shown stage: render placeholder groups so the
-    // layout on the big screen can be checked before the tournament starts.
-    if (slides.length === 0) {
-      const final = stage === 'final';
-      const views = placeholderGroupViews(final ? 'Finalgruppe' : 'Gruppe', final ? t.finalRounds : t.groupRounds);
-      const { cols, rows } = narrow ? { cols: 1, rows: views.length } : gridDims(views.length);
-      slides.push({
+    const final = stage === 'final';
+    const realViews = final ? this.store.finalGroupViews() : this.store.groupViews();
+    // No teams in any group yet (groups may already be set up empty): render
+    // placeholder teams so the layout on the big screen can be checked before
+    // the tournament starts.
+    const placeholder = realViews.every((v) => v.standings.length === 0);
+    const views = placeholder
+      ? placeholderGroupViews(
+          realViews.map((v) => v.group.name),
+          final ? 'Finalgruppe' : 'Gruppe',
+          final ? t.finalRounds : t.groupRounds,
+        )
+      : realViews;
+    const { cols, rows } = narrow ? { cols: 1, rows: views.length } : gridDims(views.length);
+    return [
+      {
         kind: 'groups-overview',
         stage: final ? 'Finalrunde' : 'Gruppenphase',
         views,
         highlightTop: final ? 1 : t.qualifiersPerGroup,
         cols,
         rows,
-        tableRowCount: PLACEHOLDER_TEAMS_PER_GROUP + 1,
-        placeholder: true,
-      });
-    }
-    return slides;
+        tableRowCount: Math.max(...views.map((v) => v.standings.length)) + 1,
+        placeholder,
+      },
+    ];
   });
 
   protected readonly current = computed<Slide>(() => {
@@ -234,9 +213,17 @@ export class PresentPage {
     this.index.set(i);
   }
 
-  /** Mobile jump bar — a button rather than `href="#…"`, which would resolve against `<base href="/">`. */
+  /**
+   * Mobile jump bar — a button rather than `href="#…"`, which would resolve
+   * against `<base href="/">`. Offsets by the sticky bar's height so it
+   * doesn't cover the group's heading (the bar wraps to a varying height).
+   */
   protected jumpToGroup(groupId: string): void {
-    this.host.nativeElement.querySelector(`#group-${CSS.escape(groupId)}`)?.scrollIntoView({ block: 'start' });
+    const root = this.host.nativeElement;
+    const card = root.querySelector<HTMLElement>(`#group-${CSS.escape(groupId)}`);
+    if (!card) return;
+    const barHeight = root.querySelector<HTMLElement>('.group-jump')?.offsetHeight ?? 0;
+    window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - barHeight - 4 });
   }
 
   protected togglePause(): void {

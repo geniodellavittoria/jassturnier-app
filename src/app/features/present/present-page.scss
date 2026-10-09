@@ -386,8 +386,10 @@
     block-size: auto;
     min-block-size: 100dvh;
     max-block-size: none;
-    overflow-y: auto;
-    overflow-x: hidden;
+    // `clip` (unlike `hidden`/`auto`) doesn't make the frame a scroll
+    // container, so the sticky .group-jump sticks to the viewport.
+    overflow: visible;
+    overflow-x: clip;
   }
 
   .slide.wide {
@@ -400,6 +402,12 @@
 
   .group-jump {
     display: flex;
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+    padding-block: 0.4rem;
+    background: var(--surface);
+    border-block-end: 1px solid var(--table-rule);
   }
 
   .title-slide h1 {
