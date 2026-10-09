@@ -56,8 +56,11 @@ interface PlaceholderShape {
   fallbackGroups: number;
   minPoints: number;
   pointSpan: number;
-  /** Leave the last round open in every other group, to preview partial tables. */
-  openLastRoundInOddGroups: boolean;
+  /**
+   * Rounds left open in every other group, so both full and in-progress
+   * tables (and the Spielplan's current/next rounds) can be previewed.
+   */
+  openRoundsInOddGroups: number;
   /** Offset into PLACEHOLDER_TEAM_NAMES, so stages don't all show the same teams. */
   nameOffset: number;
 }
@@ -66,7 +69,7 @@ const GROUP_PLACEHOLDER: PlaceholderShape = {
   fallbackGroups: 6,
   minPoints: 620,
   pointSpan: 640,
-  openLastRoundInOddGroups: true,
+  openRoundsInOddGroups: 2,
   nameOffset: 0,
 };
 /** Finalists really come from the groups, but mapping them across stages isn't worth it for a preview. */
@@ -75,7 +78,7 @@ const FINAL_PLACEHOLDER: PlaceholderShape = {
   fallbackGroups: 3,
   minPoints: 480,
   pointSpan: 300,
-  openLastRoundInOddGroups: false,
+  openRoundsInOddGroups: 1,
   nameOffset: 2,
 };
 
@@ -119,7 +122,7 @@ function placeholderGroupViews(
       const id = `placeholder-${g}-${i}`;
       const n = shape.nameOffset + g * shape.teamsPerGroup + i;
       teams[id] = { id, name: PLACEHOLDER_TEAM_NAMES[n % PLACEHOLDER_TEAM_NAMES.length], players: [] };
-      const played = shape.openLastRoundInOddGroups && g % 2 === 1 ? rounds - 1 : rounds;
+      const played = g % 2 === 1 ? rounds - shape.openRoundsInOddGroups : rounds;
       scores[id] = Array.from({ length: rounds }, (_, r) => (r < played ? nextPoints() : null));
       return id;
     });
