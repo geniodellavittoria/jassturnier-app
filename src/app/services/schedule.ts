@@ -17,19 +17,6 @@ export function maxOf(values: (number | null)[]): number | null {
   return values.reduce<number | null>((max, v) => (v !== null && (max === null || v > max) ? v : max), null);
 }
 
-/** Count of mismatched pairings across a whole schedule, given the per-team-per-round scores. */
-export function countMismatches(schedule: Pairing[][], scores: ScoreMap, max: number): number {
-  let count = 0;
-  schedule.forEach((round, r) => {
-    round.forEach((pairing) => {
-      const home = scores[pairing.homeId]?.[r] ?? null;
-      const away = scores[pairing.awayId]?.[r] ?? null;
-      if (matchPointsMismatch(home, away, max)) count++;
-    });
-  });
-  return count;
-}
-
 // Fixed reference schedule for 4-team groups (matches the tournament's
 // canonical Excel sheet) — used by the Finalrunde groups, which are always
 // drawn in fours. A valid complete round-robin (all 6 pairs among 4 teams

@@ -3,15 +3,14 @@ import { RouterLink } from '@angular/router';
 import { MAX_MATCH_POINTS_GROUP } from '../../models/tournament';
 import { maxOf, normalizeRounds } from '../../services/schedule';
 import { TournamentStore } from '../../services/tournament-store';
-import { ScoreGrid, ScoreChange } from '../../shared/score-grid';
+import { MatchEntry, ScoreChange } from '../../shared/match-entry';
 import { StandingsTable } from '../../shared/standings-table';
-import { ScheduleList } from '../../shared/schedule-list';
 import { SuitBadge } from '../../shared/suit-badge';
 
 @Component({
   selector: 'app-groups-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, ScoreGrid, StandingsTable, ScheduleList, SuitBadge],
+  imports: [RouterLink, MatchEntry, StandingsTable, SuitBadge],
   templateUrl: './groups-page.html',
   styleUrl: './groups-page.scss',
 })
@@ -28,13 +27,6 @@ export class GroupsPage {
     const views = this.views();
     if (views.length === 0) return null;
     return views[Math.min(this.selectedIndex(), views.length - 1)];
-  });
-
-  protected readonly currentTeams = computed(() => {
-    const view = this.currentView();
-    if (!view) return [];
-    const teams = this.store.tournament().teams;
-    return view.group.teamIds.map((id) => teams[id]).filter((t) => !!t);
   });
 
   /** Highest single round score across the whole group phase (every group, not just the selected one). */

@@ -30,14 +30,12 @@
         <h2>{{ view.group.name }}</h2>
         <div class="final-group">
           <div>
-            <h3>Punkte</h3>
-            <app-score-grid
-              [teams]="teamsOf(view.group.teamIds)"
-              [scores]="store.tournament().finalScores"
-              [roundCount]="store.tournament().finalRounds"
+            <h3>Resultate</h3>
+            <app-match-entry
               [schedule]="view.schedule"
+              [teams]="store.tournament().teams"
+              [scores]="store.tournament().finalScores"
               [maxPoints]="maxPoints"
-              [caption]="view.group.name"
               (scoreChange)="onScore($event)"
             />
           </div>
@@ -51,20 +49,6 @@
             />
           </div>
         </div>
-        <details>
-          <summary>
-            Spielplan anzeigen
-            @if (mismatchCount(view.schedule); as count) {
-              ({{ count }} Abweichung{{ count === 1 ? '' : 'en' }})
-            }
-          </summary>
-          <app-schedule-list
-            [schedule]="view.schedule"
-            [teams]="store.tournament().teams"
-            [scores]="store.tournament().finalScores"
-            [maxPoints]="maxPoints"
-          />
-        </details>
       </section>
     }
 

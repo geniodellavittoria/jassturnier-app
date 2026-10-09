@@ -24,25 +24,6 @@
   gap: 1.25rem;
 }
 
-details {
-  margin-block-start: 1rem;
-
-  summary {
-    cursor: pointer;
-    font-weight: 600;
-    color: var(--brand);
-
-    &:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-    }
-  }
-
-  app-schedule-list {
-    margin-block-start: 0.8rem;
-  }
-}
-
 .section-head {
   display: flex;
   align-items: center;

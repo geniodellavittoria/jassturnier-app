@@ -1,5 +1,7 @@
 :host {
   display: grid;
+  // minmax(0, …): the wide standings table scrolls inside its card instead of widening the page on phones.
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
 }
 
@@ -37,6 +39,7 @@
 
 .stack {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
 }
 

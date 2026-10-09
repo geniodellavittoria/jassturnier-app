@@ -1,6 +1,6 @@
 <header class="page-head">
   <h1>Gruppenphase</h1>
-  <p class="lede">Punkte pro Runde eintragen — Rangliste und Streichresultat rechnen sich von selbst.</p>
+  <p class="lede">Resultate pro Partie eintragen — Rangliste und Streichresultat rechnen sich von selbst.</p>
 </header>
 
 @if (views().length === 0) {
@@ -27,14 +27,12 @@
   @if (currentView(); as view) {
     <div class="stack">
       <section class="card" aria-label="Punkteeingabe">
-        <h2>Punkte — {{ view.group.name }}</h2>
-        <app-score-grid
-          [teams]="currentTeams()"
-          [scores]="store.tournament().groupScores"
-          [roundCount]="store.tournament().groupRounds"
+        <h2>Resultate — {{ view.group.name }}</h2>
+        <app-match-entry
           [schedule]="view.schedule"
+          [teams]="store.tournament().teams"
+          [scores]="store.tournament().groupScores"
           [maxPoints]="maxPoints"
-          [caption]="view.group.name"
           [topScore]="topScore()"
           (scoreChange)="onScore($event)"
         />
@@ -51,16 +49,6 @@
         <p class="hint">
           Die besten {{ store.tournament().qualifiersPerGroup }} Teams (▸) steigen in die Finalrunde auf.
         </p>
-      </section>
-
-      <section class="card" aria-label="Spielplan">
-        <h2>Spielplan</h2>
-        <app-schedule-list
-          [schedule]="view.schedule"
-          [teams]="store.tournament().teams"
-          [scores]="store.tournament().groupScores"
-          [maxPoints]="maxPoints"
-        />
       </section>
     </div>
   }

@@ -2,16 +2,14 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { RouterLink } from '@angular/router';
 import { MAX_MATCH_POINTS_FINAL } from '../../models/tournament';
 import { TournamentStore } from '../../services/tournament-store';
-import { ScoreGrid, ScoreChange } from '../../shared/score-grid';
+import { MatchEntry, ScoreChange } from '../../shared/match-entry';
 import { StandingsTable } from '../../shared/standings-table';
-import { ScheduleList } from '../../shared/schedule-list';
-import { countMismatches, Pairing } from '../../services/schedule';
 import { KoMatchCard } from './ko-match-card';
 
 @Component({
   selector: 'app-finals-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, ScoreGrid, StandingsTable, ScheduleList, KoMatchCard],
+  imports: [RouterLink, MatchEntry, StandingsTable, KoMatchCard],
   templateUrl: './finals-page.html',
   styleUrl: './finals-page.scss',
 })
@@ -26,15 +24,6 @@ export class FinalsPage {
     const ko = this.store.tournament().ko;
     return !!(ko.hf1.teamA || ko.hf2.teamA);
   });
-
-  protected teamsOf(teamIds: string[]) {
-    const teams = this.store.tournament().teams;
-    return teamIds.map((id) => teams[id]).filter((t) => !!t);
-  }
-
-  protected mismatchCount(schedule: Pairing[][]): number {
-    return countMismatches(schedule, this.store.tournament().finalScores, MAX_MATCH_POINTS_FINAL);
-  }
 
   protected draw(): void {
     const redraw = this.views().length > 0;
