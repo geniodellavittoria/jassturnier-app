@@ -135,64 +135,117 @@
           </thead>
           <tbody>
             @for (reg of registrations(); track reg.id) {
-              <tr [class.is-cancelled]="reg.status === 'cancelled'">
-                <td>
-                  <span class="team-name">{{ reg.teamName }}</span>
-                  <span class="received">
-                    {{ createdAt(reg) | date: 'dd.MM.yyyy HH:mm' }}
-                    @if (isNew(reg)) {
-                      <span class="badge-new">Neu</span>
+              @if (editingId() === reg.id) {
+                <tr class="is-editing">
+                  <td colspan="6">
+                    <form [formGroup]="editForm" (ngSubmit)="saveEdit(reg)">
+                      <div class="field-grid">
+                        <div class="field">
+                          <label [for]="'e-team-' + reg.id">Teamname</label>
+                          <input [id]="'e-team-' + reg.id" type="text" formControlName="teamName" required />
+                        </div>
+                        <div class="field">
+                          <label [for]="'e-p1-' + reg.id">Spieler:in 1</label>
+                          <input [id]="'e-p1-' + reg.id" type="text" formControlName="p1" />
+                        </div>
+                        <div class="field">
+                          <label [for]="'e-p2-' + reg.id">Spieler:in 2</label>
+                          <input [id]="'e-p2-' + reg.id" type="text" formControlName="p2" />
+                        </div>
+                        <div class="field">
+                          <label [for]="'e-name-' + reg.id">Kontaktname</label>
+                          <input [id]="'e-name-' + reg.id" type="text" formControlName="contactName" required />
+                        </div>
+                        <div class="field">
+                          <label [for]="'e-email-' + reg.id">E-Mail</label>
+                          <input [id]="'e-email-' + reg.id" type="email" formControlName="contactEmail" required />
+                        </div>
+                        <div class="field">
+                          <label [for]="'e-phone-' + reg.id">Telefon</label>
+                          <input [id]="'e-phone-' + reg.id" type="tel" formControlName="phone" />
+                        </div>
+                        <div class="field wide">
+                          <label [for]="'e-note-' + reg.id">Bemerkung</label>
+                          <textarea [id]="'e-note-' + reg.id" formControlName="note" rows="2"></textarea>
+                        </div>
+                      </div>
+                      @if (editError(); as message) {
+                        <p class="error">{{ message }}</p>
+                      }
+                      <div class="edit-actions">
+                        <button type="submit" class="btn" [disabled]="editForm.invalid || savingEdit()">
+                          @if (savingEdit()) {
+                            Wird gespeichert…
+                          } @else {
+                            Speichern
+                          }
+                        </button>
+                        <button type="button" class="btn btn-quiet" (click)="cancelEdit()">Abbrechen</button>
+                      </div>
+                    </form>
+                  </td>
+                </tr>
+              } @else {
+                <tr [class.is-cancelled]="reg.status === 'cancelled'">
+                  <td>
+                    <span class="team-name">{{ reg.teamName }}</span>
+                    <span class="received">
+                      {{ createdAt(reg) | date: 'dd.MM.yyyy HH:mm' }}
+                      @if (isNew(reg)) {
+                        <span class="badge-new">Neu</span>
+                      }
+                    </span>
+                    @if (reg.note) {
+                      <span class="note">{{ reg.note }}</span>
                     }
-                  </span>
-                  @if (reg.note) {
-                    <span class="note">{{ reg.note }}</span>
-                  }
-                </td>
-                <td>{{ playersLabel(reg) }}</td>
-                <td>
-                  <span>{{ reg.contactName }}</span>
-                  <span class="contact-email">{{ reg.contactEmail }}</span>
-                  @if (reg.phone) {
-                    <span class="contact-email">{{ reg.phone }}</span>
-                  }
-                </td>
-                <td>
-                  <select [value]="reg.status" (change)="updateStatus(reg, $any($event.target).value)">
-                    <option value="pending">Ausstehend</option>
-                    <option value="contacted">Kontaktiert</option>
-                    <option value="paid">Bezahlt</option>
-                    <option value="cancelled">Abgemeldet</option>
-                  </select>
-                </td>
-                <td>
-                  @if (groupByRegistration().get(reg.id); as groupName) {
-                    <span class="in-group">In {{ groupName }}</span>
-                  } @else if (reg.status !== 'cancelled') {
-                    @if (store.tournament().groups.length > 0) {
-                      <label class="visually-hidden" [for]="'add-' + reg.id">{{ reg.teamName }} zu Gruppe hinzufügen</label>
-                      <select [id]="'add-' + reg.id" (change)="addToGroup(reg, $any($event.target).value)">
-                        <option value="" selected>Zu Gruppe…</option>
-                        @for (group of store.tournament().groups; track group.id) {
-                          <option [value]="group.id">{{ group.name }}</option>
-                        }
-                      </select>
-                    } @else {
-                      <a class="hint-link" routerLink="/einrichtung">Zuerst Gruppen anlegen</a>
+                  </td>
+                  <td>{{ playersLabel(reg) }}</td>
+                  <td>
+                    <span>{{ reg.contactName }}</span>
+                    <span class="contact-email">{{ reg.contactEmail }}</span>
+                    @if (reg.phone) {
+                      <span class="contact-email">{{ reg.phone }}</span>
                     }
-                  }
-                </td>
-                <td class="email-actions">
-                  <a class="btn btn-quiet" [href]="mailtoHref(reg)">Mail öffnen</a>
-                  <button type="button" class="btn btn-quiet" (click)="copyEmail(reg)">
-                    @if (copiedId() === reg.id) {
-                      Kopiert!
-                    } @else {
-                      Text kopieren
+                  </td>
+                  <td>
+                    <select [value]="reg.status" (change)="updateStatus(reg, $any($event.target).value)">
+                      <option value="pending">Ausstehend</option>
+                      <option value="contacted">Kontaktiert</option>
+                      <option value="paid">Bezahlt</option>
+                      <option value="cancelled">Abgemeldet</option>
+                    </select>
+                  </td>
+                  <td>
+                    @if (groupByRegistration().get(reg.id); as groupName) {
+                      <span class="in-group">In {{ groupName }}</span>
+                    } @else if (reg.status !== 'cancelled') {
+                      @if (store.tournament().groups.length > 0) {
+                        <label class="visually-hidden" [for]="'add-' + reg.id">{{ reg.teamName }} zu Gruppe hinzufügen</label>
+                        <select [id]="'add-' + reg.id" (change)="addToGroup(reg, $any($event.target).value)">
+                          <option value="" selected>Zu Gruppe…</option>
+                          @for (group of store.tournament().groups; track group.id) {
+                            <option [value]="group.id">{{ group.name }}</option>
+                          }
+                        </select>
+                      } @else {
+                        <a class="hint-link" routerLink="/einrichtung">Zuerst Gruppen anlegen</a>
+                      }
                     }
-                  </button>
-                  <button type="button" class="btn btn-quiet" (click)="deleteRegistration(reg)">Löschen</button>
-                </td>
-              </tr>
+                  </td>
+                  <td class="email-actions">
+                    <a class="btn btn-quiet" [href]="mailtoHref(reg)">Mail öffnen</a>
+                    <button type="button" class="btn btn-quiet" (click)="copyEmail(reg)">
+                      @if (copiedId() === reg.id) {
+                        Kopiert!
+                      } @else {
+                        Text kopieren
+                      }
+                    </button>
+                    <button type="button" class="btn btn-quiet" (click)="startEdit(reg)">Bearbeiten</button>
+                    <button type="button" class="btn btn-quiet" (click)="deleteRegistration(reg)">Löschen</button>
+                  </td>
+                </tr>
+              }
             }
           </tbody>
         </table>

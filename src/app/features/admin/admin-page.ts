@@ -49,6 +49,9 @@ export class AdminPage {
   protected readonly savingSettings = signal(false);
   protected readonly settingsSaved = signal(false);
   protected readonly copiedId = signal<number | null>(null);
+  protected readonly editingId = signal<number | null>(null);
+  protected readonly savingEdit = signal(false);
+  protected readonly editError = signal<string | null>(null);
 
   /** registrationId → name of the group its team was added to. */
   protected readonly groupByRegistration = computed(() => {
@@ -83,6 +86,16 @@ export class AdminPage {
 
   protected readonly loginForm = this.fb.group({
     password: ['', [Validators.required]],
+  });
+
+  protected readonly editForm = this.fb.group({
+    teamName: ['', [Validators.required, Validators.maxLength(80)]],
+    p1: ['', [Validators.maxLength(60)]],
+    p2: ['', [Validators.maxLength(60)]],
+    contactName: ['', [Validators.required, Validators.maxLength(80)]],
+    contactEmail: ['', [Validators.required, Validators.email]],
+    phone: ['', [Validators.maxLength(30)]],
+    note: ['', [Validators.maxLength(400)]],
   });
 
   protected readonly settingsForm = this.fb.group({
@@ -187,6 +200,61 @@ export class AdminPage {
     const next = status as RegistrationStatus;
     await this.api.updateStatus(registration.id, next);
     this.registrations.update((list) => list.map((r) => (r.id === registration.id ? { ...r, status: next } : r)));
+  }
+
+  protected startEdit(registration: Registration): void {
+    this.editForm.setValue({
+      teamName: registration.teamName,
+      p1: registration.players[0] ?? '',
+      p2: registration.players[1] ?? '',
+      contactName: registration.contactName,
+      contactEmail: registration.contactEmail,
+      phone: registration.phone ?? '',
+      note: registration.note ?? '',
+    });
+    this.editError.set(null);
+    this.editingId.set(registration.id);
+  }
+
+  protected cancelEdit(): void {
+    this.editingId.set(null);
+  }
+
+  protected async saveEdit(registration: Registration): Promise<void> {
+    if (this.editForm.invalid || this.savingEdit()) return;
+    this.savingEdit.set(true);
+    this.editError.set(null);
+    const value = this.editForm.getRawValue();
+    const players = [value.p1.trim(), value.p2.trim()].filter(Boolean);
+    const updated: Registration = {
+      ...registration,
+      teamName: value.teamName.trim(),
+      players,
+      contactName: value.contactName.trim(),
+      contactEmail: value.contactEmail.trim(),
+      phone: value.phone.trim() || null,
+      note: value.note.trim() || null,
+    };
+    try {
+      await this.api.editRegistration(registration.id, {
+        teamName: updated.teamName,
+        players,
+        contactName: updated.contactName,
+        contactEmail: updated.contactEmail,
+        phone: updated.phone ?? undefined,
+        note: updated.note ?? undefined,
+      });
+    } catch {
+      this.editError.set('Änderungen konnten nicht gespeichert werden.');
+      return;
+    } finally {
+      this.savingEdit.set(false);
+    }
+    this.registrations.update((list) => list.map((r) => (r.id === registration.id ? updated : r)));
+    // Keep the team already placed in a group in sync with its registration.
+    const team = Object.values(this.store.tournament().teams).find((t) => t.registrationId === registration.id);
+    if (team) this.store.updateTeam(team.id, { name: updated.teamName, players });
+    this.editingId.set(null);
   }
 
   protected async deleteRegistration(registration: Registration): Promise<void> {

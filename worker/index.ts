@@ -46,6 +46,29 @@ function badRequest(message: string): Response {
   return json({ error: message }, { status: 400 });
 }
 
+/** Trimmed, validated registration columns, or an error message. */
+function parseRegistration(body: RegisterBody):
+  | { teamName: string; players: string; contactName: string; contactEmail: string; phone: string | null; note: string | null }
+  | string {
+  const teamName = body.teamName?.trim();
+  const contactName = body.contactName?.trim();
+  const contactEmail = body.contactEmail?.trim();
+  const players = Array.isArray(body.players) ? body.players.map((p) => String(p).trim()).filter(Boolean) : [];
+
+  if (!teamName) return 'Teamname fehlt.';
+  if (!contactName) return 'Kontaktname fehlt.';
+  if (!contactEmail || !EMAIL_RE.test(contactEmail)) return 'Gültige Kontakt-E-Mail fehlt.';
+
+  return {
+    teamName,
+    players: JSON.stringify(players),
+    contactName,
+    contactEmail,
+    phone: body.phone?.trim() || null,
+    note: body.note?.trim() || null,
+  };
+}
+
 async function handleRegister(request: Request, env: Env): Promise<Response> {
   let body: RegisterBody;
   try {
@@ -56,20 +79,14 @@ async function handleRegister(request: Request, env: Env): Promise<Response> {
 
   if (body.website) return json({ ok: true }); // honeypot tripped — pretend success, do nothing
 
-  const teamName = body.teamName?.trim();
-  const contactName = body.contactName?.trim();
-  const contactEmail = body.contactEmail?.trim();
-  const players = Array.isArray(body.players) ? body.players.map((p) => String(p).trim()).filter(Boolean) : [];
-
-  if (!teamName) return badRequest('Teamname fehlt.');
-  if (!contactName) return badRequest('Kontaktname fehlt.');
-  if (!contactEmail || !EMAIL_RE.test(contactEmail)) return badRequest('Gültige Kontakt-E-Mail fehlt.');
+  const fields = parseRegistration(body);
+  if (typeof fields === 'string') return badRequest(fields);
 
   await env.DB.prepare(
     `INSERT INTO registrations (team_name, players, contact_name, contact_email, phone, note)
      VALUES (?, ?, ?, ?, ?, ?)`,
   )
-    .bind(teamName, JSON.stringify(players), contactName, contactEmail, body.phone?.trim() || null, body.note?.trim() || null)
+    .bind(fields.teamName, fields.players, fields.contactName, fields.contactEmail, fields.phone, fields.note)
     .run();
 
   return json({ ok: true });
@@ -118,6 +135,24 @@ async function handleUpdateStatus(request: Request, env: Env, id: string): Promi
   }
   if (!body.status || !STATUSES.has(body.status)) return badRequest('Ungültiger Status.');
   await env.DB.prepare('UPDATE registrations SET status = ? WHERE id = ?').bind(body.status, id).run();
+  return json({ ok: true });
+}
+
+async function handleEditRegistration(request: Request, env: Env, id: string): Promise<Response> {
+  let body: RegisterBody;
+  try {
+    body = await request.json();
+  } catch {
+    return badRequest('Ungültige Anfrage.');
+  }
+  const fields = parseRegistration(body);
+  if (typeof fields === 'string') return badRequest(fields);
+  await env.DB.prepare(
+    `UPDATE registrations SET team_name = ?, players = ?, contact_name = ?, contact_email = ?, phone = ?, note = ?
+     WHERE id = ?`,
+  )
+    .bind(fields.teamName, fields.players, fields.contactName, fields.contactEmail, fields.phone, fields.note, id)
+    .run();
   return json({ ok: true });
 }
 
@@ -262,6 +297,11 @@ export default {
       const unauthorized = await requireAdmin(request, env);
       if (unauthorized) return unauthorized;
       return handleUpdateStatus(request, env, statusMatch[1]);
+    }
+    if (statusMatch && method === 'PUT') {
+      const unauthorized = await requireAdmin(request, env);
+      if (unauthorized) return unauthorized;
+      return handleEditRegistration(request, env, statusMatch[1]);
     }
     if (statusMatch && method === 'DELETE') {
       const unauthorized = await requireAdmin(request, env);

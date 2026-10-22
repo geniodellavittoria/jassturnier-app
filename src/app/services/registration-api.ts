@@ -56,6 +56,10 @@ export class RegistrationApi {
     return firstValueFrom(this.http.patch(`/api/admin/registrations/${id}`, { status })).then(() => undefined);
   }
 
+  editRegistration(id: number, input: RegistrationInput): Promise<void> {
+    return firstValueFrom(this.http.put(`/api/admin/registrations/${id}`, input)).then(() => undefined);
+  }
+
   deleteRegistration(id: number): Promise<void> {
     return firstValueFrom(this.http.delete(`/api/admin/registrations/${id}`)).then(() => undefined);
   }
