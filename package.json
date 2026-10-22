@@ -26,6 +26,11 @@
     ]
   },
   "private": true,
+  "overrides": {
+    "@angular/build": {
+      "vitest": "$vitest"
+    }
+  },
   "dependencies": {
     "@angular/common": "^20.3.0",
     "@angular/compiler": "^20.3.0",
