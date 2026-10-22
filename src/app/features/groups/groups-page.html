@@ -14,8 +14,8 @@
       <button
         type="button"
         class="tab"
-        [attr.aria-pressed]="$index === selectedIndex()"
-        [class.active]="$index === selectedIndex()"
+        [attr.aria-pressed]="$index === activeIndex()"
+        [class.active]="$index === activeIndex()"
         (click)="select($index)"
       >
         <app-suit-badge [index]="$index" />

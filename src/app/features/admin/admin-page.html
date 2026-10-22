@@ -98,6 +98,9 @@
       @if (settingsSaved()) {
         <span class="saved-hint">Gespeichert.</span>
       }
+      @if (settingsError(); as message) {
+        <p class="error">{{ message }}</p>
+      }
     </form>
   </section>
 
@@ -116,6 +119,10 @@
           <span>{{ st.cancelled }} abgemeldet</span>
         }
       </p>
+    }
+
+    @if (registrationsError(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
     }
 
     @if (registrations().length === 0) {
@@ -208,7 +215,7 @@
                     }
                   </td>
                   <td>
-                    <select [value]="reg.status" (change)="updateStatus(reg, $any($event.target).value)">
+                    <select [value]="reg.status" (change)="updateStatus(reg, $any($event.target))">
                       <option value="pending">Ausstehend</option>
                       <option value="contacted">Kontaktiert</option>
                       <option value="paid">Bezahlt</option>

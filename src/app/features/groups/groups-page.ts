@@ -23,11 +23,10 @@ export class GroupsPage {
 
   protected readonly views = this.store.groupViews;
 
-  protected readonly currentView = computed(() => {
-    const views = this.views();
-    if (views.length === 0) return null;
-    return views[Math.min(this.selectedIndex(), views.length - 1)];
-  });
+  /** The selected tab, clamped to the last group when the selected one was removed. */
+  protected readonly activeIndex = computed(() => Math.min(this.selectedIndex(), this.views().length - 1));
+
+  protected readonly currentView = computed(() => this.views()[this.activeIndex()] ?? null);
 
   /** Highest single round score across the whole group phase (every group, not just the selected one). */
   protected readonly topScore = computed(() => {

@@ -155,8 +155,9 @@ export function normalizeRounds(values: (number | null)[] | undefined, roundCoun
   return rounds.slice(0, roundCount);
 }
 
+/** Every team has played every round. A group without teams isn't complete — it hasn't started. */
 export function stageComplete(teamIds: string[], scores: ScoreMap, roundCount: number): boolean {
-  return teamIds.every((id) =>
+  return teamIds.length > 0 && teamIds.every((id) =>
     normalizeRounds(scores[id], roundCount).every((v) => v !== null),
   );
 }

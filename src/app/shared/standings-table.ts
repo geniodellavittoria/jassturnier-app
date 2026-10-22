@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { StandingsEntry } from '../models/tournament';
+import { playerLine, StandingsEntry } from '../models/tournament';
 
 /**
  * Ranked standings for one group. Renders in the surrounding theme
@@ -41,8 +41,8 @@ import { StandingsEntry } from '../models/tournament';
             <td class="num rank">{{ entry.rank }}</td>
             <td>
               <span class="team-name">{{ entry.team.name }}</span>
-              @if (showPlayers() && entry.team.players.length > 0) {
-                <span class="players">{{ entry.team.players.join(' · ') }}</span>
+              @if (showPlayers() && playerLine(entry.team); as players) {
+                <span class="players">{{ players }}</span>
               }
             </td>
             @for (value of entry.rounds; track $index) {
@@ -228,6 +228,8 @@ export class StandingsTable {
   readonly compact = input(false);
   /** The single highest score across the whole stage (not just this group) — highlighted wherever it appears. */
   readonly topScore = input<number | null>(null);
+
+  protected readonly playerLine = playerLine;
 
   protected isTopScore(value: number | null): boolean {
     const max = this.topScore();

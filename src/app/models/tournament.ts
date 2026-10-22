@@ -6,6 +6,7 @@ export const MAX_MATCH_POINTS_FINAL = 1256;
 export interface Team {
   id: string;
   name: string;
+  /** Player slots in order; a slot may be '' so the second player keeps its place (see playerLine). */
   players: string[];
   /** Set when the team was created from an Anmeldung (Verwaltung page). */
   registrationId?: number;
@@ -67,6 +68,11 @@ export interface StandingsEntry {
   droppedRound: number | null;
   rank: number;
   playedRounds: number;
+}
+
+/** Players for display, e.g. "Anna · Beat" — empty slots left out; '' without any. */
+export function playerLine(team: Team): string {
+  return team.players.filter((p) => p.length > 0).join(' · ');
 }
 
 export function emptyKo(): Record<KoId, KoMatch> {

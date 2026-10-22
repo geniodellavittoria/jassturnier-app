@@ -11,7 +11,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { fromEvent, map } from 'rxjs';
 import { AdminAuth } from '../../services/admin-auth';
-import { KoId, KoMatch, ScoreMap, Team } from '../../models/tournament';
+import { KoId, KoMatch, playerLine, ScoreMap, Team } from '../../models/tournament';
 import { computeStandings, maxOf, normalizeRounds, roundRobin } from '../../services/schedule';
 import { GroupView, TournamentStore } from '../../services/tournament-store';
 import { SecretTap } from '../../shared/secret-tap';
@@ -22,9 +22,6 @@ import { PresentSchedule } from './present-schedule';
 // Keep in sync with the `@media (max-width: 48rem)` breakpoint in present-page.scss.
 const NARROW_BREAKPOINT_PX = 768;
 
-interface TitleSlide {
-  kind: 'title';
-}
 interface GroupsOverviewSlide {
   kind: 'groups-overview';
   stage: 'Gruppenphase' | 'Finalrunde';
@@ -45,7 +42,7 @@ interface KoSlide {
   /** Made-up bracket shown while no KO match has teams yet. */
   placeholder?: boolean;
 }
-type Slide = TitleSlide | GroupsOverviewSlide | KoSlide;
+type Slide = GroupsOverviewSlide | KoSlide;
 
 const SLIDE_INTERVAL_MS = 12_000;
 
@@ -190,6 +187,7 @@ export class PresentPage {
   protected readonly auth = inject(AdminAuth);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
+  protected readonly playerLine = playerLine;
   protected readonly index = signal(0);
   protected readonly paused = signal(false);
 
@@ -203,23 +201,21 @@ export class PresentPage {
    * Which stage's results to show. 'auto' follows tournament progress: KO
    * once seeded, else Finalrunde once drawn, else the group phase.
    */
-  protected readonly effectiveStage = computed<'group' | 'final' | 'ko' | 'none'>(() => {
+  protected readonly effectiveStage = computed<'group' | 'final' | 'ko'>(() => {
     const configured = this.store.tournament().presentationStage;
     if (configured !== 'auto') return configured;
     const t = this.store.tournament();
     if (t.ko.hf1.teamA || t.ko.hf2.teamA) return 'ko';
     // Finalrunde groups may be set up (empty) long before the group phase is done — only switch once they have teams.
     if (this.store.finalGroupViews().some((v) => v.standings.length > 0)) return 'final';
-    if (this.store.groupViews().length > 0) return 'group';
-    return 'none';
+    return 'group';
   });
 
   /**
    * Only the configured/current stage's results — not every stage in
-   * sequence — and no separate title slide once there's something to show,
-   * so the standings/groups get the whole frame instead of sharing it with
-   * an intro screen. Before any teams exist, placeholder groups with made-up
-   * teams and points stand in so the layout can be previewed.
+   * sequence — and no title slide, so the standings/groups get the whole
+   * frame. Before any teams exist, placeholder groups with made-up teams and
+   * points stand in so the layout can be previewed. Never empty.
    */
   protected readonly slides = computed<Slide[]>(() => {
     const t = this.store.tournament();
@@ -267,7 +263,7 @@ export class PresentPage {
 
   protected readonly current = computed<Slide>(() => {
     const slides = this.slides();
-    return slides[Math.min(this.index(), slides.length - 1)] ?? { kind: 'title' };
+    return slides[Math.min(this.index(), slides.length - 1)];
   });
 
   /** Highest single round score across the whole group phase (every group). Only shown on the Gruppenphase slide. */
@@ -278,8 +274,7 @@ export class PresentPage {
   });
 
   protected readonly isPlaceholder = computed(() => {
-    const slide = this.current();
-    return slide.kind !== 'title' && !!slide.placeholder;
+    return !!this.current().placeholder;
   });
 
   private readonly koIsPlaceholder = computed(() =>
@@ -377,8 +372,6 @@ export class PresentPage {
 
   protected slideLabel(slide: Slide): string {
     switch (slide.kind) {
-      case 'title':
-        return 'Titel';
       case 'groups-overview':
         return slide.content === 'schedule' ? 'Spielplan' : 'Rangliste';
       case 'ko':

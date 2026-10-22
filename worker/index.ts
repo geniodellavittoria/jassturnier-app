@@ -6,37 +6,14 @@ import {
   timingSafeEqual,
   type Env,
 } from './auth';
+import { EMAIL_PATTERN } from '../src/app/models/registration';
 import { applyChecked, type PatchOp } from '../src/app/services/patch';
 
-interface RegisterBody {
-  teamName?: string;
-  players?: string[];
-  contactName?: string;
-  contactEmail?: string;
-  phone?: string;
-  note?: string;
-  website?: string; // honeypot — must stay empty
-}
-
-interface StatusBody {
-  status?: string;
-}
-
-interface SettingsBody {
-  recipientName?: string;
-  bankName?: string;
-  iban?: string;
-  referenceNote?: string;
-  amount?: string;
-  currency?: string;
-  deadline?: string;
-  message?: string;
-}
+type Body = Record<string, unknown>;
 
 const MAX_TOURNAMENT_BODY_BYTES = 1_000_000; // 1MB — generous headroom over a real tournament's JSON size
 
 const STATUSES = new Set(['pending', 'contacted', 'paid', 'cancelled']);
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function json(data: unknown, init?: ResponseInit): Response {
   return Response.json(data, init);
@@ -46,38 +23,53 @@ function badRequest(message: string): Response {
   return json({ error: message }, { status: 400 });
 }
 
+function notFound(): Response {
+  return json({ error: 'not found' }, { status: 404 });
+}
+
+/** The JSON body if it is an object; null when malformed or e.g. `null` or an array. */
+async function readBody(request: Request): Promise<Body | null> {
+  try {
+    const body: unknown = await request.json();
+    return body !== null && typeof body === 'object' && !Array.isArray(body) ? (body as Body) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A trimmed string field; anything that isn't a string counts as missing. */
+function text(value: unknown): string | undefined {
+  return typeof value === 'string' ? value.trim() : undefined;
+}
+
 /** Trimmed, validated registration columns, or an error message. */
-function parseRegistration(body: RegisterBody):
+function parseRegistration(body: Body):
   | { teamName: string; players: string; contactName: string; contactEmail: string; phone: string | null; note: string | null }
   | string {
-  const teamName = body.teamName?.trim();
-  const contactName = body.contactName?.trim();
-  const contactEmail = body.contactEmail?.trim();
-  const players = Array.isArray(body.players) ? body.players.map((p) => String(p).trim()).filter(Boolean) : [];
+  const teamName = text(body['teamName']);
+  const contactName = text(body['contactName']);
+  const contactEmail = text(body['contactEmail']);
+  const players = Array.isArray(body['players']) ? body['players'].map(text).filter((p): p is string => !!p) : [];
 
   if (!teamName) return 'Teamname fehlt.';
   if (!contactName) return 'Kontaktname fehlt.';
-  if (!contactEmail || !EMAIL_RE.test(contactEmail)) return 'Gültige Kontakt-E-Mail fehlt.';
+  if (!contactEmail || !EMAIL_PATTERN.test(contactEmail)) return 'Gültige Kontakt-E-Mail fehlt.';
 
   return {
     teamName,
     players: JSON.stringify(players),
     contactName,
     contactEmail,
-    phone: body.phone?.trim() || null,
-    note: body.note?.trim() || null,
+    phone: text(body['phone']) || null,
+    note: text(body['note']) || null,
   };
 }
 
 async function handleRegister(request: Request, env: Env): Promise<Response> {
-  let body: RegisterBody;
-  try {
-    body = await request.json();
-  } catch {
-    return badRequest('Ungültige Anfrage.');
-  }
+  const body = await readBody(request);
+  if (!body) return badRequest('Ungültige Anfrage.');
 
-  if (body.website) return json({ ok: true }); // honeypot tripped — pretend success, do nothing
+  if (body['website']) return json({ ok: true }); // honeypot tripped — pretend success, do nothing
 
   const fields = parseRegistration(body);
   if (typeof fields === 'string') return badRequest(fields);
@@ -93,13 +85,10 @@ async function handleRegister(request: Request, env: Env): Promise<Response> {
 }
 
 async function handleLogin(request: Request, env: Env): Promise<Response> {
-  let body: { password?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return badRequest('Ungültige Anfrage.');
-  }
-  if (!body.password || !timingSafeEqual(body.password, env.ADMIN_PASSWORD)) {
+  const body = await readBody(request);
+  if (!body) return badRequest('Ungültige Anfrage.');
+  const password = body['password'];
+  if (typeof password !== 'string' || !password || !timingSafeEqual(password, env.ADMIN_PASSWORD)) {
     return json({ error: 'Falsches Passwort.' }, { status: 401 });
   }
   const cookie = await createSessionCookie(env);
@@ -115,7 +104,7 @@ async function handleListRegistrations(env: Env): Promise<Response> {
   const registrations = results.map((row) => ({
     id: row['id'],
     teamName: row['team_name'],
-    players: JSON.parse((row['players'] as string) ?? '[]'),
+    players: JSON.parse(row['players'] as string),
     contactName: row['contact_name'],
     contactEmail: row['contact_email'],
     phone: row['phone'],
@@ -127,38 +116,31 @@ async function handleListRegistrations(env: Env): Promise<Response> {
 }
 
 async function handleUpdateStatus(request: Request, env: Env, id: string): Promise<Response> {
-  let body: StatusBody;
-  try {
-    body = await request.json();
-  } catch {
-    return badRequest('Ungültige Anfrage.');
-  }
-  if (!body.status || !STATUSES.has(body.status)) return badRequest('Ungültiger Status.');
-  await env.DB.prepare('UPDATE registrations SET status = ? WHERE id = ?').bind(body.status, id).run();
-  return json({ ok: true });
+  const body = await readBody(request);
+  if (!body) return badRequest('Ungültige Anfrage.');
+  const status = body['status'];
+  if (typeof status !== 'string' || !STATUSES.has(status)) return badRequest('Ungültiger Status.');
+  const { meta } = await env.DB.prepare('UPDATE registrations SET status = ? WHERE id = ?').bind(status, id).run();
+  return meta.changes === 0 ? notFound() : json({ ok: true });
 }
 
 async function handleEditRegistration(request: Request, env: Env, id: string): Promise<Response> {
-  let body: RegisterBody;
-  try {
-    body = await request.json();
-  } catch {
-    return badRequest('Ungültige Anfrage.');
-  }
+  const body = await readBody(request);
+  if (!body) return badRequest('Ungültige Anfrage.');
   const fields = parseRegistration(body);
   if (typeof fields === 'string') return badRequest(fields);
-  await env.DB.prepare(
+  const { meta } = await env.DB.prepare(
     `UPDATE registrations SET team_name = ?, players = ?, contact_name = ?, contact_email = ?, phone = ?, note = ?
      WHERE id = ?`,
   )
     .bind(fields.teamName, fields.players, fields.contactName, fields.contactEmail, fields.phone, fields.note, id)
     .run();
-  return json({ ok: true });
+  return meta.changes === 0 ? notFound() : json({ ok: true });
 }
 
 async function handleDeleteRegistration(env: Env, id: string): Promise<Response> {
-  await env.DB.prepare('DELETE FROM registrations WHERE id = ?').bind(id).run();
-  return json({ ok: true });
+  const { meta } = await env.DB.prepare('DELETE FROM registrations WHERE id = ?').bind(id).run();
+  return meta.changes === 0 ? notFound() : json({ ok: true });
 }
 
 async function handleGetSettings(env: Env): Promise<Response> {
@@ -180,12 +162,8 @@ async function handleGetSettings(env: Env): Promise<Response> {
 }
 
 async function handleSaveSettings(request: Request, env: Env): Promise<Response> {
-  let body: SettingsBody;
-  try {
-    body = await request.json();
-  } catch {
-    return badRequest('Ungültige Anfrage.');
-  }
+  const body = await readBody(request);
+  if (!body) return badRequest('Ungültige Anfrage.');
   await env.DB.prepare(
     `INSERT INTO settings (id, recipient_name, bank_name, iban, reference_note, amount, currency, deadline, message, updated_at)
      VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
@@ -201,14 +179,14 @@ async function handleSaveSettings(request: Request, env: Env): Promise<Response>
        updated_at = excluded.updated_at`,
   )
     .bind(
-      body.recipientName?.trim() || null,
-      body.bankName?.trim() || null,
-      body.iban?.trim() || null,
-      body.referenceNote?.trim() || null,
-      body.amount?.trim() || null,
-      body.currency?.trim() || 'CHF',
-      body.deadline?.trim() || null,
-      body.message?.trim() || null,
+      text(body['recipientName']) || null,
+      text(body['bankName']) || null,
+      text(body['iban']) || null,
+      text(body['referenceNote']) || null,
+      text(body['amount']) || null,
+      text(body['currency']) || 'CHF',
+      text(body['deadline']) || null,
+      text(body['message']) || null,
     )
     .run();
   return json({ ok: true });
@@ -335,7 +313,7 @@ export default {
       return json({ error: 'Die App wurde aktualisiert — bitte Seite neu laden.' }, { status: 410 });
     }
 
-    if (path.startsWith('/api/')) return json({ error: 'not found' }, { status: 404 });
+    if (path.startsWith('/api/')) return notFound();
 
     return env.ASSETS.fetch(request);
   },

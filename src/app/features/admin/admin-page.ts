@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { PaymentSettings, Registration, RegistrationStatus } from '../../models/registration';
+import { EMAIL_PATTERN, PaymentSettings, Registration, RegistrationStatus } from '../../models/registration';
 import { PresentationStage } from '../../models/tournament';
 import { AdminAuth } from '../../services/admin-auth';
 import { RegistrationApi } from '../../services/registration-api';
@@ -48,6 +48,9 @@ export class AdminPage {
   protected readonly registrations = signal<Registration[]>([]);
   protected readonly savingSettings = signal(false);
   protected readonly settingsSaved = signal(false);
+  protected readonly settingsError = signal<string | null>(null);
+  /** Last failed action on the registrations list (status, delete, copy). */
+  protected readonly registrationsError = signal<string | null>(null);
   protected readonly copiedId = signal<number | null>(null);
   protected readonly editingId = signal<number | null>(null);
   protected readonly savingEdit = signal(false);
@@ -93,7 +96,7 @@ export class AdminPage {
     p1: ['', [Validators.maxLength(60)]],
     p2: ['', [Validators.maxLength(60)]],
     contactName: ['', [Validators.required, Validators.maxLength(80)]],
-    contactEmail: ['', [Validators.required, Validators.email]],
+    contactEmail: ['', [Validators.required, Validators.pattern(EMAIL_PATTERN)]],
     phone: ['', [Validators.maxLength(30)]],
     note: ['', [Validators.maxLength(400)]],
   });
@@ -181,24 +184,37 @@ export class AdminPage {
     if (this.savingSettings()) return;
     this.savingSettings.set(true);
     this.settingsSaved.set(false);
+    this.settingsError.set(null);
     const value = this.settingsForm.getRawValue();
-    await this.api.saveSettings({
-      recipientName: value.recipientName.trim() || null,
-      bankName: value.bankName.trim() || null,
-      iban: value.iban.trim() || null,
-      referenceNote: value.referenceNote.trim() || null,
-      amount: value.amount.trim() || null,
-      currency: value.currency.trim() || 'CHF',
-      deadline: value.deadline.trim() || null,
-      message: value.message.trim() || null,
-    });
-    this.savingSettings.set(false);
-    this.settingsSaved.set(true);
+    try {
+      await this.api.saveSettings({
+        recipientName: value.recipientName.trim() || null,
+        bankName: value.bankName.trim() || null,
+        iban: value.iban.trim() || null,
+        referenceNote: value.referenceNote.trim() || null,
+        amount: value.amount.trim() || null,
+        currency: value.currency.trim() || 'CHF',
+        deadline: value.deadline.trim() || null,
+        message: value.message.trim() || null,
+      });
+      this.settingsSaved.set(true);
+    } catch {
+      this.settingsError.set('Zahlungsinformationen konnten nicht gespeichert werden.');
+    } finally {
+      this.savingSettings.set(false);
+    }
   }
 
-  protected async updateStatus(registration: Registration, status: string): Promise<void> {
-    const next = status as RegistrationStatus;
-    await this.api.updateStatus(registration.id, next);
+  protected async updateStatus(registration: Registration, select: HTMLSelectElement): Promise<void> {
+    const next = select.value as RegistrationStatus;
+    this.registrationsError.set(null);
+    try {
+      await this.api.updateStatus(registration.id, next);
+    } catch {
+      select.value = registration.status; // the [value] binding doesn't change, so reset the control by hand
+      this.registrationsError.set(`Status von «${registration.teamName}» konnte nicht gespeichert werden.`);
+      return;
+    }
     this.registrations.update((list) => list.map((r) => (r.id === registration.id ? { ...r, status: next } : r)));
   }
 
@@ -259,7 +275,13 @@ export class AdminPage {
 
   protected async deleteRegistration(registration: Registration): Promise<void> {
     if (!confirm(`Anmeldung «${registration.teamName}» endgültig löschen?`)) return;
-    await this.api.deleteRegistration(registration.id);
+    this.registrationsError.set(null);
+    try {
+      await this.api.deleteRegistration(registration.id);
+    } catch {
+      this.registrationsError.set(`«${registration.teamName}» konnte nicht gelöscht werden.`);
+      return;
+    }
     this.registrations.update((list) => list.filter((r) => r.id !== registration.id));
   }
 
@@ -308,7 +330,13 @@ export class AdminPage {
 
   protected async copyEmail(registration: Registration): Promise<void> {
     const text = `${this.emailSubject(registration)}\n\n${this.emailBody(registration)}`;
-    await navigator.clipboard.writeText(text);
+    this.registrationsError.set(null);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      this.registrationsError.set('Text konnte nicht kopiert werden — bitte «Mail öffnen» verwenden.');
+      return;
+    }
     this.copiedId.set(registration.id);
     setTimeout(() => this.copiedId.update((id) => (id === registration.id ? null : id)), 2000);
   }

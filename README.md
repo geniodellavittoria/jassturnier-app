@@ -13,8 +13,8 @@ inklusive Beamer-tauglicher Präsentationsansicht im Jasstafel-Look.
 - **Finalrunde** — Auslosung der Finalgruppen aus den Gruppenranglisten (Serpentinen-Setzung),
   Punkteeingabe, automatische Setzung der Halbfinals (Gruppensieger + bester Zweiter),
   Kleiner Final und Final mit Siegerehrung.
-- **Präsentation** — Vollbild-Ansicht für den Beamer: Titelfolie, eine Übersichtsfolie mit
-  allen Gruppen der Gruppenphase, eine mit allen Finalgruppen, sowie KO-Tableau und Podest.
+- **Präsentation** — Vollbild-Ansicht für den Beamer: zeigt die aktuelle Phase — alle Gruppen
+  der Gruppenphase bzw. alle Finalgruppen (Rangliste und Spielplan im Wechsel) oder KO-Tableau und Podest.
   Steuerung: `←`/`→` Folien, `Leertaste` Pause, `F` Vollbild.
 - **Anmeldung** (`/anmelden`) — öffentliches Formular, mit dem sich Teams selbst anmelden können.
 - **Verwaltung** (`/verwaltung`, passwortgeschützt) — Anmeldungen einsehen und deren Status
@@ -44,6 +44,16 @@ npm run cf:dev      # baut die App und startet sie inkl. API via wrangler dev
 npx wrangler dev              # Terminal 1: nur die API (Port 8787)
 npm run start:full            # Terminal 2: ng serve mit Proxy auf /api → 8787
 ```
+
+Tests:
+
+```bash
+npm test               # Angular-App (Karma, Watch-Modus)
+npm run test:worker    # Worker-API (Vitest im Workers-Runtime, lokale D1 mit den echten Migrationen)
+npm run coverage       # beides einmal headless, mit Coverage-Report (Schwelle: 100 %)
+```
+
+Die Reports liegen danach unter `coverage/app/index.html` bzw. `coverage/worker/index.html`.
 
 Für die Verwaltung lokal ein `.dev.vars` (siehe `.dev.vars.example`) mit `ADMIN_PASSWORD` und
 `SESSION_SECRET` anlegen — die Datei ist git-ignoriert.

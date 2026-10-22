@@ -7,6 +7,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "test:worker": "vitest",
+    "coverage": "ng test --no-watch --code-coverage --browsers=ChromeHeadlessCI --reporters=dots && vitest run --coverage",
     "deploy": "ng build && wrangler deploy",
     "cf:dev": "ng build && wrangler dev",
     "start:full": "ng serve --proxy-config proxy.conf.json"
@@ -41,8 +43,10 @@
     "@angular/build": "^20.3.32",
     "@angular/cli": "^20.3.32",
     "@angular/compiler-cli": "^20.3.0",
+    "@cloudflare/vitest-plugin": "^1.4.6",
     "@cloudflare/workers-types": "^5.20260818.1",
     "@types/jasmine": "~5.1.0",
+    "@vitest/coverage-istanbul": "^5.0.5",
     "jasmine-core": "~5.9.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
@@ -50,6 +54,7 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
     "typescript": "~5.9.2",
+    "vitest": "^5.0.5",
     "wrangler": "^4.124.0"
   }
 }

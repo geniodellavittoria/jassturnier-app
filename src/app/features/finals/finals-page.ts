@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { MAX_MATCH_POINTS_FINAL } from '../../models/tournament';
+import { MAX_MATCH_POINTS_FINAL, playerLine } from '../../models/tournament';
 import { TournamentStore } from '../../services/tournament-store';
 import { MatchEntry, ScoreChange } from '../../shared/match-entry';
 import { StandingsTable } from '../../shared/standings-table';
@@ -17,8 +17,12 @@ export class FinalsPage {
   protected readonly store = inject(TournamentStore);
 
   protected readonly maxPoints = MAX_MATCH_POINTS_FINAL;
+  protected readonly playerLine = playerLine;
 
   protected readonly views = this.store.finalGroupViews;
+
+  /** Why the Halbfinals couldn't be seeded, if they couldn't. */
+  protected readonly seedError = signal<string | null>(null);
 
   protected readonly hasKo = computed(() => {
     const ko = this.store.tournament().ko;
@@ -49,7 +53,8 @@ export class FinalsPage {
       message = 'Die Finalgruppen sind noch nicht komplett. Trotzdem nach aktuellem Stand setzen?';
     }
     if (message === null || confirm(message)) {
-      this.store.seedSemifinals();
+      const seeded = this.store.seedSemifinals();
+      this.seedError.set(seeded ? null : 'Für die Halbfinals braucht es mindestens vier Teams in der Finalrunde.');
     }
   }
 

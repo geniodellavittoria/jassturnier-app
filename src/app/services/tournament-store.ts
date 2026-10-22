@@ -4,6 +4,7 @@ import {
   emptyTournament,
   Group,
   KoId,
+  KoMatch,
   StandingsEntry,
   Team,
   Tournament,
@@ -37,6 +38,34 @@ function hydrateTournament(parsed: unknown): Tournament | null {
   const p = parsed as Partial<Tournament>;
   if (!Array.isArray(p.groups) || !p.teams) return null;
   return { ...emptyTournament(), ...p, ko: { ...emptyKo(), ...p.ko } };
+}
+
+/** `t` without the given teams — out of every group, score list and KO slot. */
+function withoutTeams(t: Tournament, teamIds: string[]): Tournament {
+  const gone = new Set(teamIds);
+  const prune = (groups: Group[]) => groups.map((g) => ({ ...g, teamIds: g.teamIds.filter((id) => !gone.has(id)) }));
+  const keep = <V>(record: Record<string, V>) =>
+    Object.fromEntries(Object.entries(record).filter(([id]) => !gone.has(id)));
+  const ko = { ...t.ko };
+  for (const id of Object.keys(ko) as KoId[]) {
+    if (ko[id].teamA !== null && gone.has(ko[id].teamA)) ko[id] = { ...ko[id], teamA: null, pointsA: null };
+    if (ko[id].teamB !== null && gone.has(ko[id].teamB)) ko[id] = { ...ko[id], teamB: null, pointsB: null };
+  }
+  return {
+    ...t,
+    teams: keep(t.teams),
+    groups: prune(t.groups),
+    groupScores: keep(t.groupScores),
+    finalGroups: prune(t.finalGroups),
+    finalScores: keep(t.finalScores),
+    ko,
+  };
+}
+
+/** The match with (possibly) new teams; entered points only survive if both teams stay the same. */
+function reseat(match: KoMatch, teamA: string | null, teamB: string | null): KoMatch {
+  if (match.teamA === teamA && match.teamB === teamB) return match;
+  return { teamA, teamB, pointsA: null, pointsB: null };
 }
 
 @Injectable({ providedIn: 'root' })
@@ -236,8 +265,11 @@ export class TournamentStore {
 
   addGroup(): void {
     this.mutate((t) => {
-      const letter = String.fromCharCode(65 + t.groups.length);
-      const group: Group = { id: `g-${crypto.randomUUID()}`, name: `Gruppe ${letter}`, teamIds: [] };
+      // First free letter, so removing a group doesn't lead to duplicate names.
+      const taken = new Set(t.groups.map((g) => g.name));
+      let n = 0;
+      while (taken.has(`Gruppe ${String.fromCharCode(65 + n)}`)) n++;
+      const group: Group = { id: `g-${crypto.randomUUID()}`, name: `Gruppe ${String.fromCharCode(65 + n)}`, teamIds: [] };
       return { ...t, groups: [...t.groups, group] };
     });
   }
@@ -253,13 +285,8 @@ export class TournamentStore {
     this.mutate((t) => {
       const group = t.groups.find((g) => g.id === groupId);
       if (!group) return t;
-      const teams = { ...t.teams };
-      const groupScores = { ...t.groupScores };
-      for (const id of group.teamIds) {
-        delete teams[id];
-        delete groupScores[id];
-      }
-      return { ...t, teams, groupScores, groups: t.groups.filter((g) => g.id !== groupId) };
+      const rest = withoutTeams(t, group.teamIds);
+      return { ...rest, groups: rest.groups.filter((g) => g.id !== groupId) };
     });
   }
 
@@ -285,18 +312,7 @@ export class TournamentStore {
   }
 
   removeTeam(teamId: string): void {
-    this.mutate((t) => {
-      const teams = { ...t.teams };
-      const groupScores = { ...t.groupScores };
-      delete teams[teamId];
-      delete groupScores[teamId];
-      return {
-        ...t,
-        teams,
-        groupScores,
-        groups: t.groups.map((g) => ({ ...g, teamIds: g.teamIds.filter((id) => id !== teamId) })),
-      };
-    });
+    this.mutate((t) => withoutTeams(t, [teamId]));
   }
 
   loadDemo(): void {
@@ -342,19 +358,19 @@ export class TournamentStore {
   /**
    * Seed the Finalrunde from the current group standings: the top
    * `qualifiersPerGroup` of every group, distributed serpentine-style across
-   * `ceil(qualifiers / 4)` groups of four.
+   * `ceil(qualifiers / 4)` groups of four. Placements are swapped where
+   * needed so two teams from the same group don't meet again.
    */
   drawFinalGroups(): void {
     const views = this.groupViews();
     this.mutate((t) => {
-      const pools: string[][] = [];
-      for (let place = 0; place < t.qualifiersPerGroup; place++) {
-        pools.push(
-          views
-            .map((v) => v.standings[place]?.team.id)
-            .filter((id): id is string => !!id),
-        );
-      }
+      // pools[place]: the teams finishing at that place, with the index of the group they come from.
+      const pools = Array.from({ length: t.qualifiersPerGroup }, (_, place) =>
+        views.flatMap((v, origin) => {
+          const id = v.standings[place]?.team.id;
+          return id ? [{ id, origin }] : [];
+        }),
+      );
       const qualifierCount = pools.reduce((a, p) => a + p.length, 0);
       const groupCount = Math.max(1, Math.ceil(qualifierCount / 4));
       const finalGroups: Group[] = Array.from({ length: groupCount }, (_, i) => ({
@@ -362,9 +378,21 @@ export class TournamentStore {
         name: `Finalgruppe ${i + 1}`,
         teamIds: [],
       }));
+      const origins = finalGroups.map(() => new Set<number>());
       pools.forEach((pool, poolIndex) => {
-        const order = poolIndex % 2 === 0 ? finalGroups : [...finalGroups].reverse();
-        pool.forEach((teamId, i) => order[i % groupCount].teamIds.push(teamId));
+        // Every other pool fills the groups in reverse order …
+        const slots = pool.map((_, i) => (poolIndex % 2 === 0 ? i % groupCount : groupCount - 1 - (i % groupCount)));
+        // … and a team whose group is already represented there swaps places with one that fits.
+        const clashes = (team: number, slot: number) => origins[slot].has(pool[team].origin);
+        for (let i = 0; i < pool.length; i++) {
+          if (!clashes(i, slots[i])) continue;
+          const j = pool.findIndex((_, k) => k !== i && !clashes(i, slots[k]) && !clashes(k, slots[i]));
+          if (j >= 0) [slots[i], slots[j]] = [slots[j], slots[i]];
+        }
+        pool.forEach(({ id, origin }, i) => {
+          finalGroups[slots[i]].teamIds.push(id);
+          origins[slots[i]].add(origin);
+        });
       });
       const finalScores = Object.fromEntries(
         finalGroups.flatMap((g) => g.teamIds.map((id) => [id, Array(t.finalRounds).fill(null)])),
@@ -377,8 +405,10 @@ export class TournamentStore {
    * Seed the Halbfinals from the Finalrunde standings: every group winner
    * plus the best runner-up (2025 mode). W1 vs best runner-up, W2 vs W3.
    * With 2 groups: W1 vs R2, W2 vs R1. With 4+ groups: winners only, 1v4, 2v3.
+   * With a single group: its top four, 1v4, 2v3. Returns false (and changes
+   * nothing) when there aren't four teams to seed.
    */
-  seedSemifinals(): void {
+  seedSemifinals(): boolean {
     const views = this.finalGroupViews();
     const winners = views
       .map((v) => v.standings[0])
@@ -396,9 +426,11 @@ export class TournamentStore {
       four = [...winners, runnersUp[0]];
     } else if (winners.length === 2) {
       four = [winners[0], winners[1], runnersUp[0], runnersUp[1]];
+    } else if (winners.length === 1) {
+      four = views[0].standings.slice(0, 4);
     }
     const [s1, s2, s3, s4] = four;
-    if (!s1 || !s2 || !s3 || !s4) return;
+    if (!s1 || !s2 || !s3 || !s4) return false;
 
     this.mutate((t) => ({
       ...t,
@@ -409,19 +441,17 @@ export class TournamentStore {
         final: { teamA: null, teamB: null, pointsA: null, pointsB: null },
       },
     }));
+    return true;
   }
 
   setKoPoints(id: KoId, side: 'A' | 'B', value: number | null): void {
     this.mutate((t) => {
       const ko = { ...t.ko, [id]: { ...t.ko[id], [side === 'A' ? 'pointsA' : 'pointsB']: value } };
       // Winners of the Halbfinals meet in the Final, losers in the Kleiner Final.
+      // A corrected Halbfinal that changes who plays there voids that match's points.
       if (id === 'hf1' || id === 'hf2') {
-        const w1 = this.winnerOf(ko.hf1);
-        const w2 = this.winnerOf(ko.hf2);
-        const l1 = this.loserOf(ko.hf1);
-        const l2 = this.loserOf(ko.hf2);
-        ko.final = { ...ko.final, teamA: w1, teamB: w2 };
-        ko.kleinerFinal = { ...ko.kleinerFinal, teamA: l1, teamB: l2 };
+        ko.final = reseat(ko.final, this.winnerOf(ko.hf1), this.winnerOf(ko.hf2));
+        ko.kleinerFinal = reseat(ko.kleinerFinal, this.loserOf(ko.hf1), this.loserOf(ko.hf2));
       }
       return { ...t, ko };
     });

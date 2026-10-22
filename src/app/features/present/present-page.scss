@@ -117,7 +117,6 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .title-slide,
   .groups-overview,
   .ko-slide,
   .card-table > * {
@@ -145,43 +144,6 @@
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--gold);
-}
-
-// Title slide
-.title-slide {
-  text-align: center;
-  display: grid;
-  justify-items: center;
-  gap: 0.8rem;
-
-  h1 {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: clamp(2.6rem, 7vw, 5.5rem);
-    font-weight: 800;
-    line-height: 1.05;
-    text-wrap: balance;
-  }
-
-  .year {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: clamp(1.4rem, 3vw, 2.2rem);
-    color: var(--text-soft);
-  }
-
-  .suit-row {
-    display: flex;
-    gap: 1.4rem;
-    margin-block-start: 0.8rem;
-    color: var(--gold);
-    --suit-size: clamp(2rem, 4vw, 3rem);
-  }
-
-  .empty-note {
-    max-inline-size: 34rem;
-    color: var(--text-soft);
-  }
 }
 
 // Groups overview slide
@@ -382,10 +344,6 @@
     padding-block: 0.4rem;
     background: var(--surface);
     border-block-end: 1px solid var(--table-rule);
-  }
-
-  .title-slide h1 {
-    font-size: clamp(1.8rem, 9vw, 3rem);
   }
 
   .groups-grid {

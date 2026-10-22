@@ -1,8 +1,15 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
 import { PaymentSettings, Registration, RegistrationInput, RegistrationStatus } from '../models/registration';
 import { PatchConflict, PatchOp } from './patch';
+
+/**
+ * Tournament sync requests give up after this long. The store skips syncing
+ * while one is in flight, so a request that never answers would otherwise
+ * stop all syncing until the page is reloaded.
+ */
+export const SYNC_TIMEOUT_MS = 15_000;
 
 export interface RemoteTournament {
   tournament: unknown;
@@ -84,7 +91,7 @@ export class RegistrationApi {
    */
   async getTournament(): Promise<RemoteTournament | null> {
     try {
-      return await firstValueFrom(this.http.get<RemoteTournament>('/api/tournament'));
+      return await firstValueFrom(this.http.get<RemoteTournament>('/api/tournament').pipe(timeout(SYNC_TIMEOUT_MS)));
     } catch {
       return null;
     }
@@ -92,6 +99,9 @@ export class RegistrationApi {
 
   /** Send only this device's changes; ops another device changed meanwhile come back as conflicts. */
   patchTournament(ops: PatchOp[]): Promise<PatchResult> {
-    return firstValueFrom(this.http.patch<PatchResult>('/api/admin/tournament', { ops }));
+    // A timed-out patch may still have been applied; resending it is harmless (already-applied ops are no-ops).
+    return firstValueFrom(
+      this.http.patch<PatchResult>('/api/admin/tournament', { ops }).pipe(timeout(SYNC_TIMEOUT_MS)),
+    );
   }
 }

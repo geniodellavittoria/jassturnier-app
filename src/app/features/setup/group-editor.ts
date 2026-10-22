@@ -190,9 +190,11 @@ export class GroupEditor {
   protected updatePlayer(teamId: string, slot: 0 | 1, event: Event): void {
     const team = this.store.team(teamId);
     if (!team) return;
-    const players = [...team.players];
+    // Both slots keep their position: a second player entered alone stays second.
+    const players = [team.players[0] ?? '', team.players[1] ?? '', ...team.players.slice(2)];
     players[slot] = (event.target as HTMLInputElement).value.trim();
-    this.store.updateTeam(teamId, { players: players.filter((p, i) => p.length > 0 || i < 2) });
+    while (players.length > 0 && players[players.length - 1] === '') players.pop();
+    this.store.updateTeam(teamId, { players });
   }
 
   protected addTeam(): void {

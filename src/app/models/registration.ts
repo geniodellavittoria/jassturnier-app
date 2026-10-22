@@ -1,3 +1,6 @@
+/** Contact e-mail rule shared by the forms and the worker, so both accept the same addresses. */
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export type RegistrationStatus = 'pending' | 'contacted' | 'paid' | 'cancelled';
 
 export interface Registration {

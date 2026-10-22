@@ -67,6 +67,9 @@
         Gesetzt werden die Gruppensieger und der beste Zweite: Bester Sieger gegen den besten Zweiten,
         die anderen beiden Sieger gegeneinander.
       </p>
+      @if (seedError(); as message) {
+        <p class="seed-error" role="alert">{{ message }}</p>
+      }
 
       @if (hasKo()) {
         <div class="ko-grid">
@@ -88,8 +91,8 @@
           <p class="champion" role="status">
             <span class="champion-label">Turniersieger {{ store.tournament().year }}</span>
             <span class="champion-name">{{ champion.name }}</span>
-            @if (champion.players.length > 0) {
-              <span class="champion-players">{{ champion.players.join(' · ') }}</span>
+            @if (playerLine(champion); as players) {
+              <span class="champion-players">{{ players }}</span>
             }
           </p>
         }

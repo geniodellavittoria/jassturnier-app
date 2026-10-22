@@ -1,5 +1,7 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { EMAIL_PATTERN } from '../../models/registration';
 import { RegistrationApi } from '../../services/registration-api';
 
 @Component({
@@ -22,7 +24,7 @@ export class RegisterPage {
     p1: ['', [Validators.maxLength(60)]],
     p2: ['', [Validators.maxLength(60)]],
     contactName: ['', [Validators.required, Validators.maxLength(80)]],
-    contactEmail: ['', [Validators.required, Validators.email]],
+    contactEmail: ['', [Validators.required, Validators.pattern(EMAIL_PATTERN)]],
     phone: ['', [Validators.maxLength(30)]],
     note: ['', [Validators.maxLength(400)]],
     website: [''], // honeypot, kept empty by real users
@@ -44,8 +46,12 @@ export class RegisterPage {
         website: value.website,
       });
       this.submitted.set(true);
-    } catch {
-      this.error.set('Anmeldung konnte nicht gesendet werden. Bitte später erneut versuchen.');
+    } catch (err) {
+      // The server explains rejected input (400); anything else is worth retrying later.
+      const reason = err instanceof HttpErrorResponse && err.status === 400 ? err.error?.error : null;
+      this.error.set(
+        typeof reason === 'string' ? reason : 'Anmeldung konnte nicht gesendet werden. Bitte später erneut versuchen.',
+      );
     } finally {
       this.submitting.set(false);
     }

@@ -38,21 +38,6 @@
 
   <main class="slide" [class.wide]="current().kind === 'groups-overview'" aria-live="polite">
     @switch (current().kind) {
-      @case ('title') {
-        <div class="title-slide">
-          <p class="eyebrow">Rangliste live</p>
-          <h1>{{ store.tournament().name }}</h1>
-          <p class="year">{{ store.tournament().year }}</p>
-          <div class="suit-row" aria-hidden="true">
-            @for (i of [0, 1, 2, 3]; track i) {
-              <app-suit-badge [index]="i" />
-            }
-          </div>
-          @if (slides().length === 1) {
-            <p class="empty-note">Noch keine Gruppen erfasst — sobald Teams eingetragen sind, erscheinen hier die Ranglisten.</p>
-          }
-        </div>
-      }
       @case ('groups-overview') {
         @if (current(); as slide) {
           @if (slide.kind === 'groups-overview') {
@@ -147,8 +132,8 @@
             <footer class="podium" role="status">
               <p class="eyebrow">Turniersieger {{ store.tournament().year }}</p>
               <p class="champion">{{ champion.name }}</p>
-              @if (champion.players.length > 0) {
-                <p class="champion-players">{{ champion.players.join(' · ') }}</p>
+              @if (playerLine(champion); as players) {
+                <p class="champion-players">{{ players }}</p>
               }
               <p class="minor-places">
                 @if (podium().second; as second) {
